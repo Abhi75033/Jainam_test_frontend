@@ -7,6 +7,7 @@ import { MemberIdCardDialog } from "@/components/common/MemberIdCardDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Search, UserPlus, Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle2, XCircle, Loader2, X } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
@@ -16,6 +17,13 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  GENDER_OPTIONS, NATIONALITY_OPTIONS, LANGUAGE_OPTIONS, MARITAL_STATUS_OPTIONS,
+  MOTHER_TONGUE_OPTIONS, TITHI_CALENDAR_OPTIONS, JAIN_SECT_OPTIONS,
+  SHWETAMBAR_SUB_SECTS, DIGAMBAR_SUB_SECTS, MURTIPUJAK_GACCHA_OPTIONS,
+  COMMUNICATION_METHOD_OPTIONS, BLOOD_GROUP_OPTIONS, VOLUNTEER_AVAILABILITY_OPTIONS,
+  toOptions,
+} from "@/constants/dropdownOptions";
 
 /* ─────────────────────────────────────────────────────────────────────────────
  * Bulk Import Dialog
@@ -225,25 +233,7 @@ const COUNTRY_CURRENCY_MAP = {
   "South Africa": "ZAR (R)",
 };
 
-const MURTIPUJAK_GACCHAS = [
-  "Upkeśa Gaccha", "Achal Gaccha", "Jiravala Gaccha", "Kharatara Gaccha", "Lonka (Richmati) Gaccha",
-  "Tapa Gaccha", "Gangeshvara Gaccha", "Korantavala Gaccha", "Anandapura Gaccha", "Bharavali Gaccha",
-  "Udhaviya Gaccha", "Gudava Gaccha", "Dekawa Gaccha", "Bhinmala Gaccha", "Mahudiya Gaccha",
-  "Gachhapala Gaccha", "Goshavala Gaccha", "Magatragada Gaccha", "Vrihmaniya Gaccha", "Talara Gaccha",
-  "Vikadiya Gaccha", "Munjhiya Gaccha", "Chitroda Gaccha", "Sachora Gaccha", "Jachandiya Gaccha",
-  "Sidhalava Gaccha", "Miyanniya Gaccha", "Agamiya Gaccha", "Maladhari Gaccha", "Bhavariya Gaccha",
-  "Paliwala Gaccha", "Nagadigeshvara Gaccha", "Dharmaghosha Gaccha", "Nagapura Gaccha", "Uchatavala Gaccha",
-  "Nannavala Gaccha", "Sadera Gaccha", "Mandovara Gaccha", "Surani Gaccha", "Khambhavati Gaccha",
-  "Panchanda Gaccha", "Sopariya Gaccha", "Mandaliya Gaccha", "Kochhipana Gaccha", "Jaganna Gaccha",
-  "Laparavala Gaccha", "Vosarada Gaccha", "Duivandaniya Gaccha", "Chitravala Gaccha", "Vegada Gaccha",
-  "Vapada Gaccha", "Vijahara Gaccha", "Kapuri Gaccha", "Kachala Gaccha", "Handaliya Gaccha",
-  "Mahukara Gaccha", "Putaliya Gaccha", "Kannariseya Gaccha", "Revardiya Gaccha", "Dhandhuka Gaccha",
-  "Thambhanipana Gaccha", "Panchivala Gaccha", "Palanpura Gaccha", "Gandhariya Gaccha", "Veliya Gaccha",
-  "Sadhapunamiya Gaccha", "Nagarakotiya Gaccha", "Hasora Gaccha", "Bhatanera Gaccha", "Janahara Gaccha",
-  "Jagayana Gaccha", "Bhimasena Gaccha", "Takadiya Gaccha", "Kamboja Gaccha", "Senata Gaccha",
-  "Vaghera Gaccha", "Vahediya Gaccha", "Siddhapura Gaccha", "Ghoghari Gaccha", "Nigamiya Gaccha",
-  "Punamiya Gaccha", "Varhadiya Gaccha", "Namila Gaccha"
-];
+// MURTIPUJAK_GACCHAS imported from @/constants/dropdownOptions
 
 function calculateAge(dobString) {
   if (!dobString) return "";
@@ -546,11 +536,13 @@ function RegisterMemberDialog({ onCreated }) {
                       </div>
                       <div>
                         <Label className="text-xs">Gender</Label>
-                        <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500">
-                          <option value="Male">Male</option>
-                          <option value="Female">Female</option>
-                          <option value="Other">Other</option>
-                        </select>
+                        <SearchableSelect
+                          value={form.gender}
+                          onValueChange={(v) => setForm({ ...form, gender: v })}
+                          options={GENDER_OPTIONS}
+                          placeholder="Select gender"
+                          className="mt-1"
+                        />
                       </div>
                     </div>
 
@@ -566,19 +558,23 @@ function RegisterMemberDialog({ onCreated }) {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <Label className="text-xs">Nationality</Label>
-                        <select value={form.nationality} onChange={(e) => setForm({ ...form, nationality: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                          {["India", "United States", "United Kingdom", "Canada", "Australia", "Singapore", "United Arab Emirates", "South Africa", "Kenya"].map(c => (
-                            <option key={c} value={c}>{c}</option>
-                          ))}
-                        </select>
+                        <SearchableSelect
+                          value={form.nationality}
+                          onValueChange={(v) => setForm({ ...form, nationality: v })}
+                          options={NATIONALITY_OPTIONS}
+                          placeholder="Select nationality"
+                          className="mt-1"
+                        />
                       </div>
                       <div>
                         <Label className="text-xs">Preferred Language</Label>
-                        <select value={form.preferredLanguage} onChange={(e) => setForm({ ...form, preferredLanguage: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                          <option value="English">English</option>
-                          <option value="Hindi">Hindi</option>
-                          <option value="Gujarati">Gujarati</option>
-                        </select>
+                        <SearchableSelect
+                          value={form.preferredLanguage}
+                          onValueChange={(v) => setForm({ ...form, preferredLanguage: v })}
+                          options={LANGUAGE_OPTIONS}
+                          placeholder="Select language"
+                          className="mt-1"
+                        />
                       </div>
                     </div>
 
@@ -595,11 +591,13 @@ function RegisterMemberDialog({ onCreated }) {
 
                     <div>
                       <Label className="text-xs">Marital Status</Label>
-                      <select value={form.maritalStatus} onChange={(e) => setForm({ ...form, maritalStatus: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                        <option value="Single">Single</option>
-                        <option value="Married">Married</option>
-                        <option value="Other">Other</option>
-                      </select>
+                      <SearchableSelect
+                        value={form.maritalStatus}
+                        onValueChange={(v) => setForm({ ...form, maritalStatus: v })}
+                        options={MARITAL_STATUS_OPTIONS}
+                        placeholder="Select status"
+                        className="mt-1"
+                      />
                     </div>
                   </div>
                 )}
@@ -611,49 +609,60 @@ function RegisterMemberDialog({ onCreated }) {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <Label className="text-xs">Mother Tongue</Label>
-                        <select value={form.motherTongue} onChange={(e) => setForm({ ...form, motherTongue: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                          {["Gujarati", "Hindi", "Kutchi", "Marathi", "Marwari", "English", "Others"].map(m => (
-                            <option key={m} value={m}>{m}</option>
-                          ))}
-                        </select>
+                        <SearchableSelect
+                          value={form.motherTongue}
+                          onValueChange={(v) => setForm({ ...form, motherTongue: v })}
+                          options={MOTHER_TONGUE_OPTIONS}
+                          placeholder="Select mother tongue"
+                          className="mt-1"
+                        />
                       </div>
                       <div>
                         <Label className="text-xs">Tithi Calendar Type</Label>
-                        <select value={form.tithiCalendar} onChange={(e) => setForm({ ...form, tithiCalendar: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                          {["Gujarati", "Hindi", "Kutchi", "Marathi", "Marwari", "Other"].map(m => (
-                            <option key={m} value={m}>{m}</option>
-                          ))}
-                        </select>
+                        <SearchableSelect
+                          value={form.tithiCalendar}
+                          onValueChange={(v) => setForm({ ...form, tithiCalendar: v })}
+                          options={TITHI_CALENDAR_OPTIONS}
+                          placeholder="Select calendar"
+                          className="mt-1"
+                        />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <Label className="text-xs">Jain Sect</Label>
-                        <select value={form.sect} onChange={(e) => setForm({ ...form, sect: e.target.value, subCommunity: e.target.value === "Digambar" ? "Bisapantha" : "Murtipujak" })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                          <option value="Shwetambar">Shwetambar</option>
-                          <option value="Digambar">Digambar</option>
-                        </select>
+                        <SearchableSelect
+                          value={form.sect}
+                          onValueChange={(v) => setForm({ ...form, sect: v, subCommunity: v === "Digambar" ? "Bisapantha" : "Murtipujak" })}
+                          options={JAIN_SECT_OPTIONS}
+                          placeholder="Select sect"
+                          className="mt-1"
+                        />
                       </div>
                       <div>
                         <Label className="text-xs">Sub Sect / Community</Label>
-                        <select value={form.subCommunity} onChange={(e) => setForm({ ...form, subCommunity: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                          {form.sect === "Digambar" ? (
-                            ["Bisapantha", "Terapantha", "Taranapantha", "Gumanapantha", "Totapantha"].map(s => <option key={s} value={s}>{s}</option>)
-                          ) : (
-                            ["Murtipujak", "Sthanakvasi", "Terapanth"].map(s => <option key={s} value={s}>{s}</option>)
-                          )}
-                        </select>
+                        <SearchableSelect
+                          value={form.subCommunity}
+                          onValueChange={(v) => setForm({ ...form, subCommunity: v })}
+                          options={toOptions(form.sect === "Digambar" ? DIGAMBAR_SUB_SECTS : SHWETAMBAR_SUB_SECTS)}
+                          placeholder="Select sub-sect"
+                          className="mt-1"
+                        />
                       </div>
                     </div>
 
                     {form.sect === "Shwetambar" && form.subCommunity === "Murtipujak" && (
                       <div>
                         <Label className="text-xs">Gaccha Selection</Label>
-                        <select value={form.gaccha} onChange={(e) => setForm({ ...form, gaccha: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                          <option value="">Choose Gaccha...</option>
-                          {MURTIPUJAK_GACCHAS.map(g => <option key={g} value={g}>{g}</option>)}
-                        </select>
+                        <SearchableSelect
+                          value={form.gaccha}
+                          onValueChange={(v) => setForm({ ...form, gaccha: v })}
+                          options={MURTIPUJAK_GACCHA_OPTIONS}
+                          placeholder="Choose Gaccha…"
+                          searchPlaceholder="Search gaccha…"
+                          className="mt-1"
+                        />
                       </div>
                     )}
                   </div>
@@ -697,11 +706,13 @@ function RegisterMemberDialog({ onCreated }) {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <Label className="text-xs">Preferred Contact Method</Label>
-                        <select value={form.preferredCommunicationMethod} onChange={(e) => setForm({ ...form, preferredCommunicationMethod: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                          <option value="Mobile">Mobile / Phone</option>
-                          <option value="WhatsApp">WhatsApp</option>
-                          <option value="Email">Email</option>
-                        </select>
+                        <SearchableSelect
+                          value={form.preferredCommunicationMethod}
+                          onValueChange={(v) => setForm({ ...form, preferredCommunicationMethod: v })}
+                          options={COMMUNICATION_METHOD_OPTIONS}
+                          placeholder="Select method"
+                          className="mt-1"
+                        />
                       </div>
                       <div>
                         <Label className="text-xs">Alternate Phone Contact</Label>
@@ -781,9 +792,13 @@ function RegisterMemberDialog({ onCreated }) {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <Label className="text-xs">Blood Group</Label>
-                        <select value={form.bloodGroup} onChange={(e) => setForm({ ...form, bloodGroup: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                          {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(g => <option key={g} value={g}>{g}</option>)}
-                        </select>
+                        <SearchableSelect
+                          value={form.bloodGroup}
+                          onValueChange={(v) => setForm({ ...form, bloodGroup: v })}
+                          options={BLOOD_GROUP_OPTIONS}
+                          placeholder="Select blood group"
+                          className="mt-1"
+                        />
                       </div>
                       <div>
                         <Label className="text-xs">Occupation</Label>
@@ -793,11 +808,14 @@ function RegisterMemberDialog({ onCreated }) {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <Label className="text-xs">Disability (Yes/No)</Label>
-                        <select value={form.disability} onChange={(e) => setForm({ ...form, disability: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                          <option value="No">No</option>
-                          <option value="Yes">Yes</option>
-                        </select>
+                        <Label className="text-xs">Disability</Label>
+                        <SearchableSelect
+                          value={form.disability}
+                          onValueChange={(v) => setForm({ ...form, disability: v })}
+                          options={[{ value: "No", label: "No" }, { value: "Yes", label: "Yes" }]}
+                          placeholder="Select"
+                          className="mt-1"
+                        />
                       </div>
                       {form.disability === "Yes" && (
                         <div>
@@ -859,12 +877,13 @@ function RegisterMemberDialog({ onCreated }) {
 
                         <div>
                           <Label className="text-xs">Availability hours</Label>
-                          <select value={form.volunteerAvailability} onChange={(e) => setForm({ ...form, volunteerAvailability: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                            <option value="Morning">Morning</option>
-                            <option value="Afternoon">Afternoon</option>
-                            <option value="Evening">Evening</option>
-                            <option value="Weekend">Weekend</option>
-                          </select>
+                          <SearchableSelect
+                            value={form.volunteerAvailability}
+                            onValueChange={(v) => setForm({ ...form, volunteerAvailability: v })}
+                            options={VOLUNTEER_AVAILABILITY_OPTIONS}
+                            placeholder="Select availability"
+                            className="mt-1"
+                          />
                         </div>
                       </>
                     )}

@@ -23,6 +23,8 @@ import {
   CalendarDays, Star,
 } from "lucide-react";
 import { toast } from "sonner";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { toOptions } from "@/constants/dropdownOptions";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDate } from "@/lib/utils";
 
@@ -50,63 +52,52 @@ const MURTIPUJAK_GACCHAS = [
 
 const MemberSelect = ({ label, value, onChange, placeholder = "Select Member..." }) => {
   const [members, setMembers] = useState([]);
-  const [search, setSearch] = useState("");
   useEffect(() => {
     api.get("/members", { params: { pageSize: 500 } })
       .then((r) => setMembers(r.data?.data?.items || r.data?.data || []))
       .catch(() => {});
   }, []);
-  const filtered = members.filter(m => 
-    m.fullName?.toLowerCase().includes(search.toLowerCase()) ||
-    m.mobile?.includes(search) ||
-    m.publicId?.toLowerCase().includes(search.toLowerCase())
-  );
+
   return (
     <div>
       <Label className="text-xs font-semibold text-slate-600">{label}</Label>
-      <div className="mt-1 space-y-1">
-        <Input placeholder="Search member by name/mobile/ID..." value={search} onChange={e => setSearch(e.target.value)} className="h-8 text-xs bg-white animate-fade-in" />
-        <select className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none"
-          value={value || ""} onChange={e => onChange(e.target.value)}>
-          <option value="">{placeholder}</option>
-          {filtered.map(m => (
-            <option key={m.id} value={m.id}>
-              {m.fullName} ({m.publicId || "No ID"}) - {m.mobile || "No phone"}
-            </option>
-          ))}
-        </select>
-      </div>
+      <SearchableSelect
+        value={value || ""}
+        onValueChange={onChange}
+        options={members.map(m => ({
+          value: m.id,
+          label: `${m.fullName} (${m.publicId || "No ID"}) - ${m.mobile || "No phone"}`
+        }))}
+        placeholder={placeholder}
+        searchPlaceholder="Search members…"
+        className="mt-1"
+      />
     </div>
   );
 };
 
 const MonkSelect = ({ label, value, onChange, placeholder = "Select Sadhuji / Sadhviji..." }) => {
   const [monks, setMonks] = useState([]);
-  const [search, setSearch] = useState("");
   useEffect(() => {
     api.get("/monks")
       .then((r) => setMonks(r.data?.data || []))
       .catch(() => {});
   }, []);
-  const filtered = monks.filter(m => 
-    m.dikshaName?.toLowerCase().includes(search.toLowerCase()) ||
-    m.publicId?.toLowerCase().includes(search.toLowerCase())
-  );
+
   return (
     <div>
       <Label className="text-xs font-semibold text-slate-600">{label}</Label>
-      <div className="mt-1 space-y-1">
-        <Input placeholder="Search MS by name/ID..." value={search} onChange={e => setSearch(e.target.value)} className="h-8 text-xs bg-white" />
-        <select className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none"
-          value={value || ""} onChange={e => onChange(e.target.value)}>
-          <option value="">{placeholder}</option>
-          {filtered.map(m => (
-            <option key={m.id} value={m.id}>
-              {m.dikshaName} ({m.publicId || "No ID"})
-            </option>
-          ))}
-        </select>
-      </div>
+      <SearchableSelect
+        value={value || ""}
+        onValueChange={onChange}
+        options={monks.map(m => ({
+          value: m.id,
+          label: `${m.dikshaName} (${m.publicId || "No ID"})`
+        }))}
+        placeholder={placeholder}
+        searchPlaceholder="Search MS by name/ID…"
+        className="mt-1"
+      />
     </div>
   );
 };

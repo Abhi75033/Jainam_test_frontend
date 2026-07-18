@@ -37,8 +37,9 @@ import {
 import { toast } from "sonner";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { useOrgs } from "@/hooks/useOrgs";
 import { OrgSelect } from "@/components/common/OrgSelect";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { toOptions } from "@/constants/dropdownOptions";
 
 const BOOKING_CATEGORIES = [
   "Dharamshala Room", "Event Hall", "Temple Hall", "Temple Space", "Pooja Booking",
@@ -700,11 +701,12 @@ export default function BookingsPage() {
               </div>
               <div>
                 <Label className="text-[10px] uppercase font-bold text-slate-400">Booking Category *</Label>
-                <select value={itemCategory} onChange={(e) => setItemCategory(e.target.value)} className="w-full mt-1 h-9 rounded border px-2 focus:outline-none">
-                  {BOOKING_CATEGORIES.map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  value={itemCategory}
+                  onValueChange={setItemCategory}
+                  options={toOptions(BOOKING_CATEGORIES)}
+                  placeholder="Select Category"
+                />
               </div>
             </div>
 
@@ -716,19 +718,24 @@ export default function BookingsPage() {
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label className="text-[10px] uppercase font-bold text-slate-400">Item Booking Type *</Label>
-                <select value={itemType} onChange={(e) => setItemType(e.target.value)} className="w-full mt-1 h-9 rounded border px-2 focus:outline-none">
-                  <option value="PAID">Paid Booking</option>
-                  <option value="FREE">Free / Complementary</option>
-                </select>
+                <SearchableSelect
+                  value={itemType}
+                  onValueChange={setItemType}
+                  options={[
+                    { value: "PAID", label: "Paid Booking" },
+                    { value: "FREE", label: "Free / Complementary" },
+                  ]}
+                  placeholder="Select Type"
+                />
               </div>
               <div>
                 <Label className="text-[10px] uppercase font-bold text-slate-400">Booking Duration *</Label>
-                <select value={itemDuration} onChange={(e) => setItemDuration(e.target.value)} className="w-full mt-1 h-9 rounded border px-2 focus:outline-none">
-                  <option value="Hourly">Hourly basis</option>
-                  <option value="Half Day">Half Day basis</option>
-                  <option value="Full Day">Full Day basis</option>
-                  <option value="Multiple Days">Multiple Days stay</option>
-                </select>
+                <SearchableSelect
+                  value={itemDuration}
+                  onValueChange={setItemDuration}
+                  options={toOptions(["Hourly basis", "Half Day basis", "Full Day basis", "Multiple Days stay"])}
+                  placeholder="Select Duration"
+                />
               </div>
               <div>
                 <Label className="text-[10px] uppercase font-bold text-slate-400">Max Capacity bookings *</Label>

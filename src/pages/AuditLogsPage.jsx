@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatDateTime } from "@/lib/utils";
@@ -58,23 +58,23 @@ export default function AuditLogsPage() {
         <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
           <div>
             <Label className="text-xs">Module</Label>
-            <Select value={filters.module} onValueChange={(v) => setFilters({ ...filters, module: v })}>
-              <SelectTrigger data-testid="audit-filter-module"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All</SelectItem>
-                {ALL_MODULES.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={filters.module}
+              onValueChange={(v) => setFilters({ ...filters, module: v })}
+              options={[{ value: "ALL", label: "All Modules" }, ...ALL_MODULES.map(m => ({ value: m, label: m }))]}
+              placeholder="All Modules"
+              searchPlaceholder="Search module…"
+            />
           </div>
           <div>
             <Label className="text-xs">Action</Label>
-            <Select value={filters.action} onValueChange={(v) => setFilters({ ...filters, action: v })}>
-              <SelectTrigger data-testid="audit-filter-action"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All</SelectItem>
-                {ALL_ACTIONS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={filters.action}
+              onValueChange={(v) => setFilters({ ...filters, action: v })}
+              options={[{ value: "ALL", label: "All Actions" }, ...ALL_ACTIONS.map(a => ({ value: a, label: a }))]}
+              placeholder="All Actions"
+              searchPlaceholder="Search action…"
+            />
           </div>
           <div>
             <Label className="text-xs">From</Label>
@@ -86,14 +86,16 @@ export default function AuditLogsPage() {
           </div>
           <div>
             <Label className="text-xs">Critical</Label>
-            <Select value={filters.isCritical} onValueChange={(v) => setFilters({ ...filters, isCritical: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All</SelectItem>
-                <SelectItem value="YES">Critical only</SelectItem>
-                <SelectItem value="NO">Non-critical</SelectItem>
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={filters.isCritical}
+              onValueChange={(v) => setFilters({ ...filters, isCritical: v })}
+              options={[
+                { value: "ALL", label: "All Logs" },
+                { value: "YES", label: "Critical only" },
+                { value: "NO", label: "Non-critical" },
+              ]}
+              placeholder="All Logs"
+            />
           </div>
           <div className="flex items-end">
             <Button onClick={fetchLogs} className="w-full" data-testid="audit-apply-button">

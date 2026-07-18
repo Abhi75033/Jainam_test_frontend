@@ -10,6 +10,8 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { toOptions } from "@/constants/dropdownOptions";
 import {
   Search,
   ScanLine,
@@ -618,66 +620,86 @@ export default function VisitorsPage() {
               <div className="space-y-3 text-xs">
                 <div>
                   <Label className="text-[10px] text-slate-400 uppercase font-bold">Category</Label>
-                  <select className="w-full mt-1 h-8 rounded border border-slate-200 bg-white text-xs px-2 focus:outline-none"
-                    value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
-                    <option value="all">All Categories</option>
-                    {["Non Member", "VIP", "Vendor", "Contractor", "Staff", "Delivery", "Unknown Visitor", "Others"].map(v => (
-                      <option key={v} value={v}>{v}</option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    value={filterCategory}
+                    onValueChange={setFilterCategory}
+                    options={[{ value: "all", label: "All Categories" }, ...toOptions(["Non Member", "VIP", "Vendor", "Contractor", "Staff", "Delivery", "Unknown Visitor", "Others"])]}
+                    placeholder="All Categories"
+                    className="h-8 text-xs mt-1"
+                  />
                 </div>
 
                 <div>
                   <Label className="text-[10px] text-slate-400 uppercase font-bold">Stay Visit Type</Label>
-                  <select className="w-full mt-1 h-8 rounded border border-slate-200 bg-white text-xs px-2 focus:outline-none"
-                    value={filterVisitType} onChange={(e) => setFilterVisitType(e.target.value)}>
-                    <option value="all">All Types</option>
-                    <option value="Day Visit">Day Visit</option>
-                    <option value="Stay">Stay</option>
-                  </select>
+                  <SearchableSelect
+                    value={filterVisitType}
+                    onValueChange={setFilterVisitType}
+                    options={[
+                      { value: "all", label: "All Types" },
+                      { value: "Day Visit", label: "Day Visit" },
+                      { value: "Stay", label: "Stay" },
+                    ]}
+                    placeholder="All Types"
+                    className="h-8 text-xs mt-1"
+                  />
                 </div>
 
                 <div>
                   <Label className="text-[10px] text-slate-400 uppercase font-bold">Vehicle Type</Label>
-                  <select className="w-full mt-1 h-8 rounded border border-slate-200 bg-white text-xs px-2 focus:outline-none"
-                    value={filterVehicleType} onChange={(e) => setFilterVehicleType(e.target.value)}>
-                    <option value="all">All Vehicles</option>
-                    {["Car", "Bike", "Auto", "Bus", "Taxi", "Other"].map(v => (
-                      <option key={v} value={v}>{v}</option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    value={filterVehicleType}
+                    onValueChange={setFilterVehicleType}
+                    options={[{ value: "all", label: "All Vehicles" }, ...toOptions(["Car", "Bike", "Auto", "Bus", "Taxi", "Other"])]}
+                    placeholder="All Vehicles"
+                    className="h-8 text-xs mt-1"
+                  />
                 </div>
 
                 <div>
                   <Label className="text-[10px] text-slate-400 uppercase font-bold">Status</Label>
-                  <select className="w-full mt-1 h-8 rounded border border-slate-200 bg-white text-xs px-2 focus:outline-none"
-                    value={filterVisitStatus} onChange={(e) => setFilterVisitStatus(e.target.value)}>
-                    <option value="all">All Status</option>
-                    <option value="Inside">Currently Inside</option>
-                    <option value="Checked Out">Checked Out</option>
-                  </select>
+                  <SearchableSelect
+                    value={filterVisitStatus}
+                    onValueChange={setFilterVisitStatus}
+                    options={[
+                      { value: "all", label: "All Status" },
+                      { value: "Inside", label: "Currently Inside" },
+                      { value: "Checked Out", label: "Checked Out" },
+                    ]}
+                    placeholder="All Status"
+                    className="h-8 text-xs mt-1"
+                  />
                 </div>
 
                 <div>
                   <Label className="text-[10px] text-slate-400 uppercase font-bold">Verification</Label>
-                  <select className="w-full mt-1 h-8 rounded border border-slate-200 bg-white text-xs px-2 focus:outline-none"
-                    value={filterVerification} onChange={(e) => setFilterVerification(e.target.value)}>
-                    <option value="all">All Verification</option>
-                    <option value="Verified">Verified JiNANAM Member</option>
-                    <option value="Manual">Manual Visitor</option>
-                  </select>
+                  <SearchableSelect
+                    value={filterVerification}
+                    onValueChange={setFilterVerification}
+                    options={[
+                      { value: "all", label: "All Verification" },
+                      { value: "Verified", label: "Verified JiNANAM Member" },
+                      { value: "Manual", label: "Manual Visitor" },
+                    ]}
+                    placeholder="All Verification"
+                    className="h-8 text-xs mt-1"
+                  />
                 </div>
 
                 <div>
                   <Label className="text-[10px] text-slate-400 uppercase font-bold">Date Range</Label>
-                  <select className="w-full mt-1 h-8 rounded border border-slate-200 bg-white text-xs px-2 focus:outline-none"
-                    value={filterDateRange} onChange={(e) => setFilterDateRange(e.target.value)}>
-                    <option value="all">All Time</option>
-                    <option value="today">Today</option>
-                    <option value="yesterday">Yesterday</option>
-                    <option value="week">Past 7 Days</option>
-                    <option value="month">Past 30 Days</option>
-                  </select>
+                  <SearchableSelect
+                    value={filterDateRange}
+                    onValueChange={setFilterDateRange}
+                    options={[
+                      { value: "all", label: "All Time" },
+                      { value: "today", label: "Today" },
+                      { value: "yesterday", label: "Yesterday" },
+                      { value: "week", label: "Past 7 Days" },
+                      { value: "month", label: "Past 30 Days" },
+                    ]}
+                    placeholder="All Time"
+                    className="h-8 text-xs mt-1"
+                  />
                 </div>
               </div>
 
@@ -819,12 +841,13 @@ export default function VisitorsPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-[10px] uppercase font-bold text-slate-400">Visitor Category *</Label>
-                    <select className="w-full mt-1 h-9 rounded-md border border-slate-205 bg-white px-3 text-sm focus:outline-none"
-                      value={visitorCategory} onChange={(e) => setVisitorCategory(e.target.value)} required>
-                      {["Non Member", "VIP", "Vendor", "Contractor", "Staff", "Delivery", "Unknown Visitor", "Others"].map(v => (
-                        <option key={v} value={v}>{v}</option>
-                      ))}
-                    </select>
+                    <SearchableSelect
+                      value={visitorCategory}
+                      onValueChange={setVisitorCategory}
+                      options={toOptions(["Non Member", "VIP", "Vendor", "Contractor", "Staff", "Delivery", "Unknown Visitor", "Others"])}
+                      placeholder="Select category"
+                      className="mt-1"
+                    />
                   </div>
                   <div>
                     <Label className="text-[10px] uppercase font-bold text-slate-400">Full Visitor Name *</Label>
@@ -907,23 +930,29 @@ export default function VisitorsPage() {
                 </div>
                 <div>
                   <Label className="text-[10px] uppercase font-bold text-slate-400">Vehicle Classification *</Label>
-                  <select className="w-full mt-1 h-9 rounded-md border border-slate-205 bg-white px-3 text-sm focus:outline-none"
-                    value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} required>
-                    {["Car", "Bike", "Auto", "Bus", "Taxi", "Other"].map(v => (
-                      <option key={v} value={v}>{v}</option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    value={vehicleType}
+                    onValueChange={setVehicleType}
+                    options={toOptions(["Car", "Bike", "Auto", "Bus", "Taxi", "Other"])}
+                    placeholder="Select vehicle type"
+                    className="mt-1"
+                  />
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <Label className="text-[10px] uppercase font-bold text-slate-400">Visit Type *</Label>
-                  <select className="w-full mt-1 h-9 rounded-md border border-slate-205 bg-white px-3 text-sm focus:outline-none"
-                    value={visitType} onChange={(e) => setVisitType(e.target.value)} required>
-                    <option value="Day Visit">Day Visit</option>
-                    <option value="Stay">Stay (Overnight)</option>
-                  </select>
+                  <SearchableSelect
+                    value={visitType}
+                    onValueChange={setVisitType}
+                    options={[
+                      { value: "Day Visit", label: "Day Visit" },
+                      { value: "Stay", label: "Stay (Overnight)" },
+                    ]}
+                    placeholder="Select visit type"
+                    className="mt-1"
+                  />
                 </div>
                 <div>
                   <Label className="text-[10px] uppercase font-bold text-slate-400">Visitor Count *</Label>

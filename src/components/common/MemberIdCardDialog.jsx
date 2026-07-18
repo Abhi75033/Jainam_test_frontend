@@ -16,6 +16,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import {
+  GENDER_OPTIONS, NATIONALITY_OPTIONS, LANGUAGE_OPTIONS, MARITAL_STATUS_OPTIONS,
+  MOTHER_TONGUE_OPTIONS, TITHI_CALENDAR_OPTIONS, JAIN_SECT_OPTIONS,
+  SHWETAMBAR_SUB_SECTS, DIGAMBAR_SUB_SECTS, MURTIPUJAK_GACCHA_OPTIONS,
+  toOptions,
+} from "@/constants/dropdownOptions";
 
 /* ─── Helpers & Constants ─────────────────────────────────────── */
 function initials(name = "") {
@@ -436,11 +443,13 @@ function EditPanel({ member, onSave, onCancel }) {
                 </div>
                 <div>
                   <Label className="text-xs font-semibold text-slate-600">Gender</Label>
-                  <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500">
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
+                  <SearchableSelect
+                    value={form.gender}
+                    onValueChange={(v) => setForm({ ...form, gender: v })}
+                    options={GENDER_OPTIONS}
+                    placeholder="Select gender"
+                    className="mt-1"
+                  />
                 </div>
               </div>
 
@@ -456,19 +465,23 @@ function EditPanel({ member, onSave, onCancel }) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs font-semibold text-slate-600">Nationality</Label>
-                  <select value={form.nationality} onChange={(e) => setForm({ ...form, nationality: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                    {["India", "United States", "United Kingdom", "Canada", "Australia", "Singapore", "United Arab Emirates", "South Africa", "Kenya"].map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    value={form.nationality}
+                    onValueChange={(v) => setForm({ ...form, nationality: v })}
+                    options={NATIONALITY_OPTIONS}
+                    placeholder="Select nationality"
+                    className="mt-1"
+                  />
                 </div>
                 <div>
                   <Label className="text-xs font-semibold text-slate-600">Preferred Language</Label>
-                  <select value={form.preferredLanguage} onChange={(e) => setForm({ ...form, preferredLanguage: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                    <option value="English">English</option>
-                    <option value="Hindi">Hindi</option>
-                    <option value="Gujarati">Gujarati</option>
-                  </select>
+                  <SearchableSelect
+                    value={form.preferredLanguage}
+                    onValueChange={(v) => setForm({ ...form, preferredLanguage: v })}
+                    options={LANGUAGE_OPTIONS}
+                    placeholder="Select language"
+                    className="mt-1"
+                  />
                 </div>
               </div>
 
@@ -485,11 +498,13 @@ function EditPanel({ member, onSave, onCancel }) {
 
               <div>
                 <Label className="text-xs font-semibold text-slate-600">Marital Status</Label>
-                <select value={form.maritalStatus} onChange={(e) => setForm({ ...form, maritalStatus: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                  <option value="Single">Single</option>
-                  <option value="Married">Married</option>
-                  <option value="Other">Other</option>
-                </select>
+                <SearchableSelect
+                  value={form.maritalStatus}
+                  onValueChange={(v) => setForm({ ...form, maritalStatus: v })}
+                  options={MARITAL_STATUS_OPTIONS}
+                  placeholder="Select status"
+                  className="mt-1"
+                />
               </div>
             </div>
           )}
@@ -501,49 +516,60 @@ function EditPanel({ member, onSave, onCancel }) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs font-semibold text-slate-600">Mother Tongue</Label>
-                  <select value={form.motherTongue} onChange={(e) => setForm({ ...form, motherTongue: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                    {["Gujarati", "Hindi", "Kutchi", "Marathi", "Marwari", "English", "Others"].map(m => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    value={form.motherTongue}
+                    onValueChange={(v) => setForm({ ...form, motherTongue: v })}
+                    options={MOTHER_TONGUE_OPTIONS}
+                    placeholder="Select mother tongue"
+                    className="mt-1"
+                  />
                 </div>
                 <div>
                   <Label className="text-xs font-semibold text-slate-600">Tithi Calendar Type</Label>
-                  <select value={form.tithiCalendar} onChange={(e) => setForm({ ...form, tithiCalendar: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                    {["Gujarati", "Hindi", "Kutchi", "Marathi", "Marwari", "Other"].map(m => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    value={form.tithiCalendar}
+                    onValueChange={(v) => setForm({ ...form, tithiCalendar: v })}
+                    options={TITHI_CALENDAR_OPTIONS}
+                    placeholder="Select calendar"
+                    className="mt-1"
+                  />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs font-semibold text-slate-600">Jain Sect</Label>
-                  <select value={form.sect} onChange={(e) => setForm({ ...form, sect: e.target.value, subCommunity: e.target.value === "Digambar" ? "Bisapantha" : "Murtipujak" })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                    <option value="Shwetambar">Shwetambar</option>
-                    <option value="Digambar">Digambar</option>
-                  </select>
+                  <SearchableSelect
+                    value={form.sect}
+                    onValueChange={(v) => setForm({ ...form, sect: v, subCommunity: v === "Digambar" ? "Bisapantha" : "Murtipujak" })}
+                    options={JAIN_SECT_OPTIONS}
+                    placeholder="Select sect"
+                    className="mt-1"
+                  />
                 </div>
                 <div>
                   <Label className="text-xs font-semibold text-slate-600">Sub Sect / Community</Label>
-                  <select value={form.subCommunity} onChange={(e) => setForm({ ...form, subCommunity: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                    {form.sect === "Digambar" ? (
-                      ["Bisapantha", "Terapantha", "Taranapantha", "Gumanapantha", "Totapantha"].map(s => <option key={s} value={s}>{s}</option>)
-                    ) : (
-                      ["Murtipujak", "Sthanakvasi", "Terapanth"].map(s => <option key={s} value={s}>{s}</option>)
-                    )}
-                  </select>
+                  <SearchableSelect
+                    value={form.subCommunity}
+                    onValueChange={(v) => setForm({ ...form, subCommunity: v })}
+                    options={toOptions(form.sect === "Digambar" ? DIGAMBAR_SUB_SECTS : SHWETAMBAR_SUB_SECTS)}
+                    placeholder="Select sub-sect"
+                    className="mt-1"
+                  />
                 </div>
               </div>
 
               {form.sect === "Shwetambar" && form.subCommunity === "Murtipujak" && (
                 <div>
                   <Label className="text-xs font-semibold text-slate-600">Gaccha Selection</Label>
-                  <select value={form.gaccha} onChange={(e) => setForm({ ...form, gaccha: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                    <option value="">Choose Gaccha...</option>
-                    {MURTIPUJAK_GACCHAS.map(g => <option key={g} value={g}>{g}</option>)}
-                  </select>
+                  <SearchableSelect
+                    value={form.gaccha}
+                    onValueChange={(v) => setForm({ ...form, gaccha: v })}
+                    options={MURTIPUJAK_GACCHA_OPTIONS}
+                    placeholder="Choose Gaccha…"
+                    searchPlaceholder="Search Gaccha…"
+                    className="mt-1"
+                  />
                 </div>
               )}
             </div>
@@ -560,15 +586,16 @@ function EditPanel({ member, onSave, onCancel }) {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label className="text-xs font-semibold">Document Type</Label>
-                      <select value={doc.docType} onChange={(e) => {
-                        const list = [...form.govtDocs];
-                        list[idx].docType = e.target.value;
-                        setForm({ ...form, govtDocs: list });
-                      }} className="w-full mt-1 h-8 rounded border border-slate-200 bg-white px-2 text-xs focus:outline-none">
-                        {["Aadhaar Card", "PAN Card", "Passport", "Driving Licence", "Voter ID", "Other Government ID"].map(t => (
-                          <option key={t} value={t}>{t}</option>
-                        ))}
-                      </select>
+                      <SearchableSelect
+                        value={doc.docType}
+                        onValueChange={(v) => {
+                          const list = [...form.govtDocs];
+                          list[idx].docType = v;
+                          setForm({ ...form, govtDocs: list });
+                        }}
+                        options={toOptions(["Aadhaar Card", "PAN Card", "Passport", "Driving Licence", "Voter ID", "Other Government ID"])}
+                        placeholder="Select document type"
+                      />
                     </div>
                     <div>
                       <Label className="text-xs font-semibold">Document Number</Label>
@@ -628,11 +655,17 @@ function EditPanel({ member, onSave, onCancel }) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs font-semibold text-slate-600">Preferred Contact Method</Label>
-                  <select value={form.preferredCommunicationMethod} onChange={(e) => setForm({ ...form, preferredCommunicationMethod: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                    <option value="Mobile">Mobile / Phone</option>
-                    <option value="WhatsApp">WhatsApp</option>
-                    <option value="Email">Email</option>
-                  </select>
+                  <SearchableSelect
+                    value={form.preferredCommunicationMethod}
+                    onValueChange={(v) => setForm({ ...form, preferredCommunicationMethod: v })}
+                    options={[
+                      { value: "Mobile", label: "Mobile / Phone" },
+                      { value: "WhatsApp", label: "WhatsApp" },
+                      { value: "Email", label: "Email" },
+                    ]}
+                    placeholder="Select contact method"
+                    className="mt-1"
+                  />
                 </div>
                 <div>
                   <Label className="text-xs font-semibold text-slate-600">Alternate Phone Contact</Label>
@@ -669,11 +702,13 @@ function EditPanel({ member, onSave, onCancel }) {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs font-semibold text-slate-600">Country</Label>
-                    <select value={form.currentAddress.country} onChange={(e) => setForm({ ...form, currentAddress: { ...form.currentAddress, country: e.target.value } })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                      {["India", "United States", "United Kingdom", "Canada", "Australia", "Singapore", "United Arab Emirates", "South Africa", "Kenya"].map(c => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
+                    <SearchableSelect
+                      value={form.currentAddress.country}
+                      onValueChange={(v) => setForm({ ...form, currentAddress: { ...form.currentAddress, country: v } })}
+                      options={NATIONALITY_OPTIONS}
+                      placeholder="Select country"
+                      className="mt-1"
+                    />
                   </div>
                   <div>
                     <Label className="text-xs font-semibold text-slate-600">Pin Code</Label>
@@ -730,11 +765,13 @@ function EditPanel({ member, onSave, onCancel }) {
 
               <div>
                 <Label className="text-xs font-semibold text-slate-600">Visit Frequency</Label>
-                <select value={form.visitFrequency} onChange={(e) => setForm({ ...form, visitFrequency: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                  <option value="Daily">Daily</option>
-                  <option value="Weekly">Weekly</option>
-                  <option value="Occasionally">Occasionally</option>
-                </select>
+                <SearchableSelect
+                  value={form.visitFrequency}
+                  onValueChange={(v) => setForm({ ...form, visitFrequency: v })}
+                  options={toOptions(["Daily", "Weekly", "Occasionally"])}
+                  placeholder="Select frequency"
+                  className="mt-1"
+                />
               </div>
 
               <div className="p-3 bg-orange-50 border border-orange-100 rounded-lg text-xs text-orange-700 leading-relaxed">
@@ -783,9 +820,13 @@ function EditPanel({ member, onSave, onCancel }) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs font-semibold text-slate-600">Blood Group</Label>
-                  <select value={form.bloodGroup} onChange={(e) => setForm({ ...form, bloodGroup: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                    {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(g => <option key={g} value={g}>{g}</option>)}
-                  </select>
+                  <SearchableSelect
+                    value={form.bloodGroup}
+                    onValueChange={(v) => setForm({ ...form, bloodGroup: v })}
+                    options={BLOOD_GROUP_OPTIONS}
+                    placeholder="Select blood group"
+                    className="mt-1"
+                  />
                 </div>
                 <div>
                   <Label className="text-xs font-semibold text-slate-600">Occupation</Label>
@@ -796,10 +837,16 @@ function EditPanel({ member, onSave, onCancel }) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs font-semibold text-slate-600">Disability (Yes/No)</Label>
-                  <select value={form.disability} onChange={(e) => setForm({ ...form, disability: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                    <option value="No">No</option>
-                    <option value="Yes">Yes</option>
-                  </select>
+                  <SearchableSelect
+                    value={form.disability}
+                    onValueChange={(v) => setForm({ ...form, disability: v })}
+                    options={[
+                      { value: "No", label: "No" },
+                      { value: "Yes", label: "Yes" },
+                    ]}
+                    placeholder="Select"
+                    className="mt-1"
+                  />
                 </div>
                 {form.disability === "Yes" && (
                   <div>
@@ -812,10 +859,16 @@ function EditPanel({ member, onSave, onCancel }) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs font-semibold text-slate-600">Physically Handicapped (Yes/No)</Label>
-                  <select value={form.physicallyHandicapped} onChange={(e) => setForm({ ...form, physicallyHandicapped: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                    <option value="No">No</option>
-                    <option value="Yes">Yes</option>
-                  </select>
+                  <SearchableSelect
+                    value={form.physicallyHandicapped}
+                    onValueChange={(v) => setForm({ ...form, physicallyHandicapped: v })}
+                    options={[
+                      { value: "No", label: "No" },
+                      { value: "Yes", label: "Yes" },
+                    ]}
+                    placeholder="Select"
+                    className="mt-1"
+                  />
                 </div>
                 {form.physicallyHandicapped === "Yes" && (
                   <div>
@@ -877,12 +930,13 @@ function EditPanel({ member, onSave, onCancel }) {
 
                   <div>
                     <Label className="text-xs font-semibold text-slate-600">Availability hours</Label>
-                    <select value={form.volunteerAvailability} onChange={(e) => setForm({ ...form, volunteerAvailability: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                      <option value="Morning">Morning</option>
-                      <option value="Afternoon">Afternoon</option>
-                      <option value="Evening">Evening</option>
-                      <option value="Weekend">Weekend</option>
-                    </select>
+                    <SearchableSelect
+                      value={form.volunteerAvailability}
+                      onValueChange={(v) => setForm({ ...form, volunteerAvailability: v })}
+                      options={toOptions(["Morning", "Afternoon", "Evening", "Weekend"])}
+                      placeholder="Select availability"
+                      className="mt-1"
+                    />
                   </div>
                 </>
               )}
@@ -917,15 +971,17 @@ function EditPanel({ member, onSave, onCancel }) {
                         }} placeholder="Full Name" className="h-8 text-xs" />
                       </div>
                       <div className="col-span-3">
-                        <select value={m.relationship} onChange={(e) => {
-                          const list = [...form.familyMembers];
-                          list[idx].relationship = e.target.value;
-                          setForm({ ...form, familyMembers: list });
-                        }} className="w-full h-8 rounded border border-slate-200 bg-white px-2 text-xs focus:outline-none">
-                          {["Father", "Mother", "Husband", "Wife", "Son", "Daughter", "Brother", "Sister"].map(r => (
-                            <option key={r} value={r}>{r}</option>
-                          ))}
-                        </select>
+                        <SearchableSelect
+                          value={m.relationship}
+                          onValueChange={(v) => {
+                            const list = [...form.familyMembers];
+                            list[idx].relationship = v;
+                            setForm({ ...form, familyMembers: list });
+                          }}
+                          options={toOptions(["Father", "Mother", "Husband", "Wife", "Son", "Daughter", "Brother", "Sister"])}
+                          placeholder="Relationship"
+                          className="h-8 text-xs"
+                        />
                       </div>
                       <div className="col-span-3">
                         <Input value={m.mobile} onChange={(e) => {
@@ -1019,17 +1075,23 @@ function EditPanel({ member, onSave, onCancel }) {
                 <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">💰 Preferred Billing Currency</h3>
                 <div>
                   <Label className="text-xs font-semibold text-slate-650">Platform Display Currency</Label>
-                  <select value={form.preferredCurrency} onChange={(e) => setForm({ ...form, preferredCurrency: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                    <option value="INR (₹)">INR (₹) — India</option>
-                    <option value="GBP (£)">GBP (£) — United Kingdom</option>
-                    <option value="USD ($)">USD ($) — United States</option>
-                    <option value="CAD (C$)">CAD (C$) — Canada</option>
-                    <option value="AUD (A$)">AUD (A$) — Australia</option>
-                    <option value="AED (د.إ)">AED (د.إ) — UAE</option>
-                    <option value="SGD (S$)">SGD (S$) — Singapore</option>
-                    <option value="KES (KSh)">KES (KSh) — Kenya</option>
-                    <option value="ZAR (R)">ZAR (R) — South Africa</option>
-                  </select>
+                  <SearchableSelect
+                    value={form.preferredCurrency}
+                    onValueChange={(v) => setForm({ ...form, preferredCurrency: v })}
+                    options={[
+                      { value: "INR (₹)", label: "INR (₹) — India" },
+                      { value: "GBP (£)", label: "GBP (£) — United Kingdom" },
+                      { value: "USD ($)", label: "USD ($) — United States" },
+                      { value: "CAD (C$)", label: "CAD (C$) — Canada" },
+                      { value: "AUD (A$)", label: "AUD (A$) — Australia" },
+                      { value: "AED (د.إ)", label: "AED (د.إ) — UAE" },
+                      { value: "SGD (S$)", label: "SGD (S$) — Singapore" },
+                      { value: "KES (KSh)", label: "KES (KSh) — Kenya" },
+                      { value: "ZAR (R)", label: "ZAR (R) — South Africa" },
+                    ]}
+                    placeholder="Select display currency"
+                    className="mt-1"
+                  />
                   <div className="text-[10px] text-slate-400 mt-1">Currency automatically pre-selected based on Address country setting.</div>
                 </div>
               </div>

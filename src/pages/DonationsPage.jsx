@@ -18,8 +18,8 @@ import { toast } from "sonner";
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { formatCurrency, formatDateTime, initials } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 const STATUS_TONE = {
   PENDING: "bg-amber-100 text-amber-700",
@@ -341,11 +341,14 @@ export default function DonationsPage() {
             {isSuperAdmin && (
               <div>
                 <Label className="text-xs">Select Temple / Organization *</Label>
-                <select className="w-full mt-1 h-9 rounded-md border border-input bg-background px-3 text-sm"
-                  value={targetOrgId} onChange={(e) => setTargetOrgId(e.target.value)} required>
-                  <option value="">Choose temple…</option>
-                  {orgsList.map((o) => <option key={o.id} value={o.id}>{o.name} ({o.city})</option>)}
-                </select>
+                <SearchableSelect
+                  value={targetOrgId}
+                  onValueChange={setTargetOrgId}
+                  options={orgsList.map((o) => ({ value: o.id, label: `${o.name} (${o.city})` }))}
+                  placeholder="Choose temple…"
+                  searchPlaceholder="Search temple…"
+                  className="mt-1"
+                />
               </div>
             )}
 

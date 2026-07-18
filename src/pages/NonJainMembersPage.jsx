@@ -13,6 +13,11 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import {
+  GENDER_OPTIONS, NATIONALITY_OPTIONS, LANGUAGE_OPTIONS, DOC_TYPE_OPTIONS,
+  COMMUNICATION_METHOD_OPTIONS, BLOOD_GROUP_OPTIONS,
+} from "@/constants/dropdownOptions";
 
 const COUNTRY_CURRENCY_MAP = {
   "India": "INR (₹)",
@@ -305,30 +310,35 @@ function RegisterNonJainDialog({ onCreated }) {
                       </div>
                       <div>
                         <Label className="text-xs">Gender</Label>
-                        <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                          <option value="Male">Male</option>
-                          <option value="Female">Female</option>
-                          <option value="Other">Other</option>
-                        </select>
+                        <SearchableSelect
+                          value={form.gender}
+                          onValueChange={(v) => setForm({ ...form, gender: v })}
+                          options={GENDER_OPTIONS}
+                          placeholder="Select gender"
+                          className="mt-1"
+                        />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <Label className="text-xs">Nationality</Label>
-                        <select value={form.nationality} onChange={(e) => setForm({ ...form, nationality: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                          {["India", "United States", "United Kingdom", "Canada", "Australia", "Singapore", "United Arab Emirates", "South Africa", "Kenya"].map(c => (
-                            <option key={c} value={c}>{c}</option>
-                          ))}
-                        </select>
+                        <SearchableSelect
+                          value={form.nationality}
+                          onValueChange={(v) => setForm({ ...form, nationality: v })}
+                          options={NATIONALITY_OPTIONS}
+                          placeholder="Select nationality"
+                          className="mt-1"
+                        />
                       </div>
                       <div>
                         <Label className="text-xs">Preferred Language</Label>
-                        <select value={form.preferredLanguage} onChange={(e) => setForm({ ...form, preferredLanguage: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                          <option value="English">English</option>
-                          <option value="Hindi">Hindi</option>
-                          <option value="Gujarati">Gujarati</option>
-                        </select>
+                        <SearchableSelect
+                          value={form.preferredLanguage}
+                          onValueChange={(v) => setForm({ ...form, preferredLanguage: v })}
+                          options={LANGUAGE_OPTIONS}
+                          placeholder="Select language"
+                          className="mt-1"
+                        />
                       </div>
                     </div>
                   </div>
@@ -345,15 +355,17 @@ function RegisterNonJainDialog({ onCreated }) {
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <Label className="text-xs font-semibold">Document Type</Label>
-                            <select value={doc.docType} onChange={(e) => {
-                              const list = [...form.govtDocs];
-                              list[idx].docType = e.target.value;
-                              setForm({ ...form, govtDocs: list });
-                            }} className="w-full mt-1 h-8 rounded border border-slate-200 bg-white px-2 text-xs focus:outline-none">
-                              {["Aadhaar Card", "PAN Card", "Passport", "Driving Licence", "Voter ID", "Other Government ID"].map(t => (
-                                <option key={t} value={t}>{t}</option>
-                              ))}
-                            </select>
+                            <SearchableSelect
+                              value={doc.docType}
+                              onValueChange={(v) => {
+                                const list = [...form.govtDocs];
+                                list[idx].docType = v;
+                                setForm({ ...form, govtDocs: list });
+                              }}
+                              options={DOC_TYPE_OPTIONS}
+                              placeholder="Select document type"
+                              className="mt-1"
+                            />
                           </div>
                           <div>
                             <Label className="text-xs font-semibold">Document Number</Label>
@@ -412,12 +424,13 @@ function RegisterNonJainDialog({ onCreated }) {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <Label className="text-xs">Preferred Contact Method</Label>
-                        <select value={form.preferredCommunicationMethod} onChange={(e) => setForm({ ...form, preferredCommunicationMethod: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                          <option value="Mobile">Mobile / Phone</option>
-                          <option value="WhatsApp">WhatsApp</option>
-                          <option value="Email">Email</option>
-                        </select>
+                        <SearchableSelect
+                          value={form.preferredCommunicationMethod}
+                          onValueChange={(v) => setForm({ ...form, preferredCommunicationMethod: v })}
+                          options={COMMUNICATION_METHOD_OPTIONS}
+                          placeholder="Select contact method"
+                          className="mt-1"
+                        />
                       </div>
                       <div>
                         <Label className="text-xs">Alternate Phone Contact</Label>
@@ -453,12 +466,13 @@ function RegisterNonJainDialog({ onCreated }) {
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <Label className="text-xs">Country</Label>
-                          <select value={form.currentAddress.country} onChange={(e) => setForm({ ...form, currentAddress: { ...form.currentAddress, country: e.target.value } })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                            {["India", "United States", "United Kingdom", "Canada", "Australia", "Singapore", "United Arab Emirates", "South Africa", "Kenya"].map(c => (
-                              <option key={c} value={c}>{c}</option>
-                            ))}
-                          </select>
+                          <SearchableSelect
+                            value={form.currentAddress.country}
+                            onValueChange={(v) => setForm({ ...form, currentAddress: { ...form.currentAddress, country: v } })}
+                            options={NATIONALITY_OPTIONS}
+                            placeholder="Select country"
+                            className="mt-1"
+                          />
                         </div>
                         <div>
                           <Label className="text-xs">Pin Code</Label>
@@ -543,10 +557,13 @@ function RegisterNonJainDialog({ onCreated }) {
                     <h3 className="text-sm font-bold text-slate-800 border-b pb-1.5">🏥 Health, Emergency & Volunteering</h3>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <Label className="text-xs">Blood Group</Label>
-                        <select value={form.bloodGroup} onChange={(e) => setForm({ ...form, bloodGroup: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                          {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(g => <option key={g} value={g}>{g}</option>)}
-                        </select>
+                        <SearchableSelect
+                          value={form.bloodGroup}
+                          onValueChange={(v) => setForm({ ...form, bloodGroup: v })}
+                          options={BLOOD_GROUP_OPTIONS}
+                          placeholder="Select blood group"
+                          className="mt-1"
+                        />
                       </div>
                       <div>
                         <Label className="text-xs">Occupation / Profession</Label>

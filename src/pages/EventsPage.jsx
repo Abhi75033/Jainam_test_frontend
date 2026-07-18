@@ -42,6 +42,8 @@ import { formatDate, formatDateTime, formatCurrency } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrgs } from "@/hooks/useOrgs";
 import { OrgSelect } from "@/components/common/OrgSelect";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { toOptions, JAIN_SECT_OPTIONS, SHWETAMBAR_SUB_SECTS, DIGAMBAR_SUB_SECTS } from "@/constants/dropdownOptions";
 
 const EVENT_CATEGORIES = [
   "Religious", "Pravachan", "Pooja", "Cultural Program", "Community Meeting",
@@ -481,11 +483,14 @@ export default function EventsPage() {
                   </div>
                   <div>
                     <Label className="text-[10px] uppercase font-bold text-slate-400">Category *</Label>
-                    <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full mt-1.5 h-9 rounded border px-2 focus:outline-none">
-                      {EVENT_CATEGORIES.map(v => (
-                        <option key={v} value={v}>{v}</option>
-                      ))}
-                    </select>
+                    <SearchableSelect
+                      value={category}
+                      onValueChange={setCategory}
+                      options={EVENT_CATEGORIES.map(v => ({ value: v, label: v }))}
+                      placeholder="Select category"
+                      searchPlaceholder="Search category…"
+                      className="mt-1"
+                    />
                   </div>
                 </div>
 
@@ -574,22 +579,33 @@ export default function EventsPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label className="text-[10px] uppercase font-bold text-slate-400">Target Sect</Label>
-                      <select value={targetSect} onChange={(e) => { setTargetSect(e.target.value); setTargetSubSect(""); }} className="w-full mt-1.5 h-9 rounded border px-2 bg-white focus:outline-none">
-                        <option value="All Jain Members">All Jain Members</option>
-                        <option value="Digambar">Digambar</option>
-                        <option value="Shwetambar">Shwetambar</option>
-                      </select>
+                      <SearchableSelect
+                        value={targetSect}
+                        onValueChange={(v) => { setTargetSect(v); setTargetSubSect(""); }}
+                        options={[
+                          { value: "All Jain Members", label: "All Jain Members" },
+                          { value: "Digambar", label: "Digambar" },
+                          { value: "Shwetambar", label: "Shwetambar" },
+                        ]}
+                        placeholder="Select sect"
+                        className="mt-1"
+                      />
                     </div>
 
                     {["Digambar", "Shwetambar"].includes(targetSect) && (
                       <div>
                         <Label className="text-[10px] uppercase font-bold text-slate-400">Sub-Sect / Tradition</Label>
-                        <select value={targetSubSect} onChange={(e) => setTargetSubSect(e.target.value)} className="w-full mt-1.5 h-9 rounded border px-2 bg-white focus:outline-none">
-                          <option value="">Select Option</option>
-                          {SECT_HIERARCHY[targetSect].map(v => (
-                            <option key={v} value={v}>{v}</option>
-                          ))}
-                        </select>
+                        <SearchableSelect
+                          value={targetSubSect}
+                          onValueChange={setTargetSubSect}
+                          options={[
+                            { value: "", label: "Select Option" },
+                            ...SECT_HIERARCHY[targetSect].map(v => ({ value: v, label: v }))
+                          ]}
+                          placeholder="Select sub-sect"
+                          searchPlaceholder="Search sub-sect…"
+                          className="mt-1"
+                        />
                       </div>
                     )}
                   </div>

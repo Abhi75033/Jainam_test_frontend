@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Armchair, Plus, Loader2, Lock, LockOpen, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -104,16 +104,14 @@ export default function SeatingPage() {
 
       <Card className="p-4 rounded-xl border-border mb-4">
         <Label className="text-xs">Event</Label>
-        <Select value={eventId} onValueChange={setEventId}>
-          <SelectTrigger className="mt-1 max-w-md" data-testid="seating-event-select">
-            <SelectValue placeholder="Select a paid event" />
-          </SelectTrigger>
-          <SelectContent>
-            {events.map((e) => (
-              <SelectItem key={e.id} value={e.id}>{e.title}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          value={eventId}
+          onValueChange={setEventId}
+          options={events.map((e) => ({ value: e.id, label: e.title }))}
+          placeholder="Select a paid event"
+          searchPlaceholder="Search events…"
+          className="mt-1 max-w-md"
+        />
       </Card>
 
       {!eventId ? (
@@ -128,13 +126,15 @@ export default function SeatingPage() {
               <div className="text-xs uppercase tracking-widest text-muted-foreground font-semibold mb-2">Add section</div>
               <div className="space-y-2">
                 <Input placeholder="e.g. VIP" value={newSection.name} onChange={(e) => setNewSection({ ...newSection, name: e.target.value })} data-testid="section-name-input" />
-                <Select value={newSection.mode} onValueChange={(v) => setNewSection({ ...newSection, mode: v })}>
-                  <SelectTrigger data-testid="section-mode-select"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="OPEN">Open seating</SelectItem>
-                    <SelectItem value="RESERVED">Reserved seating</SelectItem>
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={newSection.mode}
+                  onValueChange={(v) => setNewSection({ ...newSection, mode: v })}
+                  options={[
+                    { value: "OPEN", label: "Open seating" },
+                    { value: "RESERVED", label: "Reserved seating" },
+                  ]}
+                  placeholder="Mode"
+                />
                 <Button onClick={addSection} disabled={saving} className="w-full" data-testid="section-add-btn">
                   <Plus className="h-3 w-3 mr-1" /> Add section
                 </Button>
@@ -143,12 +143,13 @@ export default function SeatingPage() {
             <Card className="p-4 rounded-xl border-border">
               <div className="text-xs uppercase tracking-widest text-muted-foreground font-semibold mb-2">Add row</div>
               <div className="space-y-2">
-                <Select value={newRow.sectionId} onValueChange={(v) => setNewRow({ ...newRow, sectionId: v })}>
-                  <SelectTrigger data-testid="row-section-select"><SelectValue placeholder="Section" /></SelectTrigger>
-                  <SelectContent>
-                    {(map.sections || []).map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={newRow.sectionId}
+                  onValueChange={(v) => setNewRow({ ...newRow, sectionId: v })}
+                  options={(map.sections || []).map((s) => ({ value: s.id, label: s.name }))}
+                  placeholder="Section"
+                  searchPlaceholder="Search sections…"
+                />
                 <Input placeholder="Row label (e.g. A)" value={newRow.label} onChange={(e) => setNewRow({ ...newRow, label: e.target.value })} data-testid="row-label-input" />
                 <Button onClick={addRow} disabled={saving} className="w-full" data-testid="row-add-btn">
                   <Plus className="h-3 w-3 mr-1" /> Add row
@@ -158,12 +159,13 @@ export default function SeatingPage() {
             <Card className="p-4 rounded-xl border-border">
               <div className="text-xs uppercase tracking-widest text-muted-foreground font-semibold mb-2">Add seats</div>
               <div className="space-y-2">
-                <Select value={newSeats.rowId} onValueChange={(v) => setNewSeats({ ...newSeats, rowId: v })}>
-                  <SelectTrigger data-testid="seats-row-select"><SelectValue placeholder="Row" /></SelectTrigger>
-                  <SelectContent>
-                    {allRows.map((r) => <SelectItem key={r.id} value={r.id}>{r.sectionName} · {r.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={newSeats.rowId}
+                  onValueChange={(v) => setNewSeats({ ...newSeats, rowId: v })}
+                  options={allRows.map((r) => ({ value: r.id, label: `${r.sectionName} · ${r.label}` }))}
+                  placeholder="Row"
+                  searchPlaceholder="Search rows…"
+                />
                 <Input type="number" min="1" placeholder="Number of seats" value={newSeats.count} onChange={(e) => setNewSeats({ ...newSeats, count: e.target.value })} data-testid="seats-count-input" />
                 <Button onClick={addSeats} disabled={saving} className="w-full" data-testid="seats-add-btn">
                   <Plus className="h-3 w-3 mr-1" /> Add seats

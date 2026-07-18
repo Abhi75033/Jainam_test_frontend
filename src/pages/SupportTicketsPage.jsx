@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 export default function SupportTicketsPage() {
   const { user, isSuperAdmin } = useAuth();
@@ -170,17 +171,18 @@ export default function SupportTicketsPage() {
                 <span className="text-xs font-bold text-primary block">Super Admin Actions</span>
                 <div>
                   <Label className="text-xs">Update Status</Label>
-                  <Select value={statusVal} onValueChange={setStatusVal}>
-                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-white border border-border mt-1">
-                      <SelectValue placeholder="Select Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="OPEN" className="text-xs font-medium">Open</SelectItem>
-                      <SelectItem value="IN_PROGRESS" className="text-xs font-medium">Pending / In Progress</SelectItem>
-                      <SelectItem value="RESOLVED" className="text-xs font-medium">Resolved</SelectItem>
-                      <SelectItem value="CLOSED" className="text-xs font-medium">Closed</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    value={statusVal}
+                    onValueChange={setStatusVal}
+                    options={[
+                      { value: "OPEN", label: "Open" },
+                      { value: "IN_PROGRESS", label: "Pending / In Progress" },
+                      { value: "RESOLVED", label: "Resolved" },
+                      { value: "CLOSED", label: "Closed" },
+                    ]}
+                    placeholder="Select Status"
+                    className="mt-1"
+                  />
                 </div>
                 <div>
                   <Label className="text-xs">Resolution Notes</Label>

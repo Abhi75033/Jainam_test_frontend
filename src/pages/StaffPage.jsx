@@ -50,16 +50,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useOrgs } from "@/hooks/useOrgs";
 import { OrgSelect } from "@/components/common/OrgSelect";
 import { toast } from "sonner";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import {
+  GENDER_OPTIONS, BLOOD_GROUP_OPTIONS, WORK_CATEGORY_OPTIONS, LEAVE_TYPE_OPTIONS,
+  ATTENDANCE_STATUSES, toOptions,
+} from "@/constants/dropdownOptions";
 
-const WORK_CATEGORIES = [
-  "Temple Staff", "Dharamshala Staff", "Bhojanshala Staff", "Security Guard",
-  "Housekeeping", "Poojari", "Manager", "Office Staff", "Maintenance",
-  "Driver", "Gardener", "Electrician", "Plumber", "Volunteer Staff", "Other"
-];
-
-const LEAVE_TYPES = [
-  "Casual Leave", "Sick Leave", "Paid Leave", "Unpaid Leave", "Emergency Leave"
-];
+// WORK_CATEGORIES and LEAVE_TYPES imported from @/constants/dropdownOptions
 
 export default function StaffPage() {
   const { canDo, user, isSuperAdmin } = useAuth();
@@ -721,11 +718,13 @@ export default function StaffPage() {
                   </div>
                   <div>
                     <Label className="text-[10px] uppercase font-bold text-slate-400">Gender</Label>
-                    <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                    </select>
+                    <SearchableSelect
+                      value={form.gender}
+                      onValueChange={(v) => setForm({ ...form, gender: v })}
+                      options={GENDER_OPTIONS}
+                      placeholder="Select gender"
+                      className="mt-1"
+                    />
                   </div>
                   <div>
                     <Label className="text-[10px] uppercase font-bold text-slate-400">Email ID (Optional)</Label>
@@ -828,11 +827,13 @@ export default function StaffPage() {
                   </div>
                   <div>
                     <Label className="text-[10px] uppercase font-bold text-slate-400">Staff Category Designation *</Label>
-                    <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none" required>
-                      {WORK_CATEGORIES.map(v => (
-                        <option key={v} value={v}>{v}</option>
-                      ))}
-                    </select>
+                    <SearchableSelect
+                      value={form.category}
+                      onValueChange={(v) => setForm({ ...form, category: v })}
+                      options={WORK_CATEGORY_OPTIONS}
+                      placeholder="Select category"
+                      className="mt-1"
+                    />
                   </div>
                 </div>
 
@@ -850,24 +851,26 @@ export default function StaffPage() {
                   </div>
                   <div>
                     <Label className="text-[10px] uppercase font-bold text-slate-400">Department Assign</Label>
-                    <select value={form.departmentId} onChange={(e) => setForm({ ...form, departmentId: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                      <option value="">Select Department</option>
-                      {depts.map(d => (
-                        <option key={d.id} value={d.id}>{d.name}</option>
-                      ))}
-                    </select>
+                    <SearchableSelect
+                      value={form.departmentId}
+                      onValueChange={(v) => setForm({ ...form, departmentId: v })}
+                      options={[{ value: "", label: "Select Department" }, ...depts.map(d => ({ value: d.id, label: d.name }))]}
+                      placeholder="Select Department"
+                      className="mt-1"
+                    />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-[10px] uppercase font-bold text-slate-400">Designation Assign</Label>
-                    <select value={form.designationId} onChange={(e) => setForm({ ...form, designationId: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                      <option value="">Select Designation</option>
-                      {designations.map(d => (
-                        <option key={d.id} value={d.id}>{d.name}</option>
-                      ))}
-                    </select>
+                    <SearchableSelect
+                      value={form.designationId}
+                      onValueChange={(v) => setForm({ ...form, designationId: v })}
+                      options={[{ value: "", label: "Select Designation" }, ...designations.map(d => ({ value: d.id, label: d.name }))]}
+                      placeholder="Select Designation"
+                      className="mt-1"
+                    />
                   </div>
                 </div>
               </div>
@@ -893,11 +896,13 @@ export default function StaffPage() {
                   </div>
                   <div>
                     <Label className="text-[10px] uppercase font-bold text-slate-400">Blood Group</Label>
-                    <select value={form.bloodGroup} onChange={(e) => setForm({ ...form, bloodGroup: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                      {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(v => (
-                        <option key={v} value={v}>{v}</option>
-                      ))}
-                    </select>
+                    <SearchableSelect
+                      value={form.bloodGroup}
+                      onValueChange={(v) => setForm({ ...form, bloodGroup: v })}
+                      options={BLOOD_GROUP_OPTIONS}
+                      placeholder="Select blood group"
+                      className="mt-1"
+                    />
                   </div>
                 </div>
 
@@ -946,13 +951,13 @@ export default function StaffPage() {
 
             <div>
               <Label className="text-[10px] uppercase font-bold text-slate-400">Attendance Status Option *</Label>
-              <select value={manualAttStatus} onChange={(e) => setManualAttStatus(e.target.value)} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
-                <option value="PRESENT">Full Day Present</option>
-                <option value="HALF_DAY">Half Day Present</option>
-                <option value="ABSENT">Absent Today</option>
-                <option value="LEAVE">On Approved Leave</option>
-                <option value="HOLIDAY">Official Holiday</option>
-              </select>
+              <SearchableSelect
+                value={manualAttStatus}
+                onValueChange={setManualAttStatus}
+                options={ATTENDANCE_STATUSES}
+                placeholder="Select status"
+                className="mt-1"
+              />
             </div>
 
             <div>
@@ -1157,15 +1162,13 @@ export default function StaffPage() {
           <div className="space-y-4 pt-2">
             <div>
               <Label className="text-[10px] uppercase font-bold text-slate-400">Document Type *</Label>
-              <select value={newDocType} onChange={(e) => setNewDocType(e.target.value)} className="w-full mt-1 h-9 rounded border px-2 focus:outline-none">
-                <option value="Aadhaar Card">Aadhaar Card</option>
-                <option value="PAN Card">PAN Card</option>
-                <option value="Driving Licence">Driving Licence</option>
-                <option value="Police Verification">Police Verification</option>
-                <option value="Employment Agreement">Employment Agreement</option>
-                <option value="Medical Certificate">Medical Certificate</option>
-                <option value="Other Documents">Other Documents</option>
-              </select>
+              <SearchableSelect
+                value={newDocType}
+                onValueChange={setNewDocType}
+                options={toOptions(["Aadhaar Card", "PAN Card", "Driving Licence", "Police Verification", "Employment Agreement", "Medical Certificate", "Other Documents"])}
+                placeholder="Select document type"
+                className="mt-1"
+              />
             </div>
 
             <div>
@@ -1204,11 +1207,13 @@ export default function StaffPage() {
           <div className="space-y-4 pt-2">
             <div>
               <Label className="text-[10px] uppercase font-bold text-slate-400">Leave Type Category *</Label>
-              <select value={leaveType} onChange={(e) => setLeaveType(e.target.value)} className="w-full mt-1 h-9 rounded border px-2 focus:outline-none">
-                {LEAVE_TYPES.map(v => (
-                  <option key={v} value={v}>{v}</option>
-                ))}
-              </select>
+              <SearchableSelect
+                value={leaveType}
+                onValueChange={setLeaveType}
+                options={LEAVE_TYPE_OPTIONS}
+                placeholder="Select leave type"
+                className="mt-1"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3">

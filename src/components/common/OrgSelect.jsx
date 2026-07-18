@@ -1,4 +1,4 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Label } from "@/components/ui/label";
 import { useOrgs } from "@/hooks/useOrgs";
 
@@ -12,19 +12,18 @@ export function OrgSelect({ value, onChange, label = "Organization", className =
   return (
     <div className={className}>
       {label && <Label className="text-xs">{label}</Label>}
-      <Select value={value || ""} onValueChange={onChange}>
-        <SelectTrigger className="mt-1 max-w-md bg-white" data-testid={testId}>
-          <SelectValue placeholder={loading ? "Loading organizations…" : "Select organization"} />
-        </SelectTrigger>
-        <SelectContent>
-          {orgs.map((o) => (
-            <SelectItem key={o.id} value={o.id}>
-              {o.name}
-              {o.city ? ` · ${o.city}` : ""}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <SearchableSelect
+        value={value || ""}
+        onValueChange={onChange}
+        options={orgs.map((o) => ({
+          value: o.id,
+          label: `${o.name}${o.city ? ` · ${o.city}` : ""}`
+        }))}
+        placeholder={loading ? "Loading organizations…" : "Select organization"}
+        searchPlaceholder="Search organization…"
+        className="mt-1 max-w-md"
+        data-testid={testId}
+      />
     </div>
   );
 }

@@ -41,11 +41,10 @@ import { formatDate, formatDateTime } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrgs } from "@/hooks/useOrgs";
 import { OrgSelect } from "@/components/common/OrgSelect";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { NEWS_CATEGORY_OPTIONS } from "@/constants/dropdownOptions";
 
-const NEWS_CATEGORIES = [
-  "Temple News", "Jain Centre News", "Community News", "Monk News",
-  "Events", "Tours", "Religious Updates", "Charity", "JiNANAM Updates", "Other"
-];
+// NEWS_CATEGORIES imported from @/constants/dropdownOptions
 
 const getCoverUrl = (url) => {
   if (!url || url.includes("placeholder") || (!url.startsWith("http") && !url.startsWith("/static"))) {
@@ -357,13 +356,13 @@ export default function NewsPage() {
                 <p className="text-[11px] text-slate-400">Audit news categories, restore expired archives, and monitor article performance statistics.</p>
               </div>
               <div className="flex gap-2">
-                <select className="h-8 rounded border text-xs px-2 bg-slate-50 focus:outline-none"
-                  value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
-                  <option value="all">All Categories</option>
-                  {NEWS_CATEGORIES.map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  className="h-8 text-xs bg-slate-50 w-44"
+                  value={selectedCategory}
+                  onValueChange={setSelectedCategory}
+                  options={[{ value: "all", label: "All Categories" }, ...NEWS_CATEGORY_OPTIONS]}
+                  placeholder="All Categories"
+                />
                 <div className="flex items-center gap-1">
                   <label className="text-[11px] font-bold text-slate-500 cursor-pointer flex items-center gap-1.5">
                     <input type="checkbox" checked={filterArchived} onChange={(e) => setFilterArchived(e.target.checked)} className="rounded border-slate-300" />
@@ -521,12 +520,13 @@ export default function NewsPage() {
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Paryushan Parva Commences Tomorrow" required className="h-9 mt-1" />
               </div>
               <div>
-                <Label className="text-[10px] uppercase font-bold text-slate-400">News Category *</Label>
-                <select value={categoryName} onChange={(e) => setCategoryName(e.target.value)} className="w-full mt-1.5 h-9 rounded border px-2 focus:outline-none">
-                  {NEWS_CATEGORIES.map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  value={categoryName}
+                  onValueChange={setCategoryName}
+                  options={NEWS_CATEGORY_OPTIONS}
+                  placeholder="Select Category"
+                  className="mt-1.5"
+                />
               </div>
             </div>
 
@@ -592,12 +592,13 @@ export default function NewsPage() {
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} required className="h-9 mt-1" />
               </div>
               <div>
-                <Label className="text-[10px] uppercase font-bold text-slate-400">News Category *</Label>
-                <select value={categoryName} onChange={(e) => setCategoryName(e.target.value)} className="w-full mt-1.5 h-9 rounded border px-2 focus:outline-none">
-                  {NEWS_CATEGORIES.map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  value={categoryName}
+                  onValueChange={setCategoryName}
+                  options={NEWS_CATEGORY_OPTIONS}
+                  placeholder="Select Category"
+                  className="mt-1.5"
+                />
               </div>
             </div>
 

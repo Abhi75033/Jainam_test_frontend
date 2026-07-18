@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Download, FileText, FileSpreadsheet, FileJson, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { DataTable } from "@/components/common/DataTable";
@@ -81,24 +81,25 @@ export default function ReportsPage() {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
           <div>
             <Label className="text-xs">Report</Label>
-            <Select value={reportKey} onValueChange={setReportKey}>
-              <SelectTrigger data-testid="reports-select"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {REPORTS.map((r) => (
-                  <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={reportKey}
+              onValueChange={setReportKey}
+              options={REPORTS.map((r) => ({ value: r.key, label: r.label }))}
+              placeholder="Select Report"
+              searchPlaceholder="Search report…"
+            />
           </div>
           <div>
             <Label className="text-xs">Scope</Label>
-            <Select value={scope} onValueChange={setScope}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="org">My Organization</SelectItem>
-                {isSuperAdmin && <SelectItem value="platform">Platform-wide</SelectItem>}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={scope}
+              onValueChange={setScope}
+              options={[
+                { value: "org", label: "My Organization" },
+                ...(isSuperAdmin ? [{ value: "platform", label: "Platform-wide" }] : []),
+              ]}
+              placeholder="Select Scope"
+            />
           </div>
           <div>
             <Label className="text-xs">From</Label>

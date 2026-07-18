@@ -8,7 +8,7 @@ import { Flame, Calendar, MapPin, Plus, UserCheck, Pencil, Trash2 } from "lucide
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
@@ -181,17 +181,17 @@ export default function ChaturmasPage() {
           <div className="space-y-3 pt-2">
             <div>
               <Label className="text-xs">Linked Monk Profile (Optional)</Label>
-              <Select value={form.monkId} onValueChange={(val) => setForm({ ...form, monkId: val })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a monk" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Create Custom Monk Record (Not Linked)</SelectItem>
-                  {monks.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>{m.dikshaName} ({m.publicId})</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={form.monkId}
+                onValueChange={(val) => setForm({ ...form, monkId: val })}
+                options={[
+                  { value: "none", label: "Create Custom Monk Record (Not Linked)" },
+                  ...monks.map((m) => ({ value: m.id, label: `${m.dikshaName} (${m.publicId})` }))
+                ]}
+                placeholder="Select a monk"
+                searchPlaceholder="Search monks…"
+                className="mt-1"
+              />
             </div>
             {form.monkId === "none" && (
               <div>
@@ -226,16 +226,17 @@ export default function ChaturmasPage() {
             {editing && (
               <div>
                 <Label className="text-xs">Status</Label>
-                <Select value={form.status} onValueChange={(val) => setForm({ ...form, status: val })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ACTIVE">ACTIVE</SelectItem>
-                    <SelectItem value="COMPLETED">COMPLETED</SelectItem>
-                    <SelectItem value="CANCELLED">CANCELLED</SelectItem>
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={form.status}
+                  onValueChange={(val) => setForm({ ...form, status: val })}
+                  options={[
+                    { value: "ACTIVE", label: "ACTIVE" },
+                    { value: "COMPLETED", label: "COMPLETED" },
+                    { value: "CANCELLED", label: "CANCELLED" },
+                  ]}
+                  placeholder="Select status"
+                  className="mt-1"
+                />
               </div>
             )}
           </div>

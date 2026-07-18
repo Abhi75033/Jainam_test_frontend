@@ -11,9 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { GENDER_OPTIONS } from "@/constants/dropdownOptions";
 import { UserPlus, Loader2, Users, Shield, IdCard } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -80,16 +79,13 @@ function AddFamilyDialog({ open, onClose, onCreated }) {
           </div>
           <div>
             <Label className="text-xs">Relationship *</Label>
-            <Select value={form.relationshipTypeId} onValueChange={(v) => setForm({ ...form, relationshipTypeId: v })}>
-              <SelectTrigger data-testid="family-relationship">
-                <SelectValue placeholder="Select relationship…" />
-              </SelectTrigger>
-              <SelectContent>
-                {relTypes.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={form.relationshipTypeId}
+              onValueChange={(v) => setForm({ ...form, relationshipTypeId: v })}
+              options={relTypes.map((r) => ({ value: r.id, label: r.name }))}
+              placeholder="Select relationship…"
+              searchPlaceholder="Search relationship…"
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -98,14 +94,12 @@ function AddFamilyDialog({ open, onClose, onCreated }) {
             </div>
             <div>
               <Label className="text-xs">Gender</Label>
-              <Select value={form.gender} onValueChange={(v) => setForm({ ...form, gender: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Male">Male</SelectItem>
-                  <SelectItem value="Female">Female</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={form.gender}
+                onValueChange={(v) => setForm({ ...form, gender: v })}
+                options={GENDER_OPTIONS}
+                placeholder="Select gender"
+              />
             </div>
           </div>
           <DialogFooter>

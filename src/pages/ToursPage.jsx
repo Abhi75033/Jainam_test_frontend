@@ -38,6 +38,11 @@ import {
   Building
 } from "lucide-react";
 import { toast } from "sonner";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import {
+  TOUR_TYPE_OPTIONS, SPONSOR_CATEGORY_OPTIONS, BLOOD_GROUP_OPTIONS,
+  ROOM_TYPE_OPTIONS, BULK_ATTENDANCE_STATUSES, toOptions,
+} from "@/constants/dropdownOptions";
 import { formatDate, formatDateTime, formatCurrency } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -621,12 +626,16 @@ export default function ToursPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label className="text-[10px] uppercase font-bold text-slate-400">Select Room *</Label>
-                      <select value={assignRoomId} onChange={(e) => setAssignRoomId(e.target.value)} required className="w-full mt-1.5 h-9 rounded border px-2 bg-white focus:outline-none">
-                        <option value="">Choose Room</option>
-                        {occupancyList.flatMap(loc => (loc.rooms || []).map(r => (
-                          <option key={r.id} value={r.id}>{loc.location} — Room {r.name} ({r.occupied}/{r.capacity} beds)</option>
-                        )))}
-                      </select>
+                      <SearchableSelect
+                        value={assignRoomId}
+                        onValueChange={setAssignRoomId}
+                        options={occupancyList.flatMap(loc => (loc.rooms || []).map(r => ({
+                          value: r.id,
+                          label: `${loc.location} — Room ${r.name} (${r.occupied}/${r.capacity} beds)`
+                        })))}
+                        placeholder="Choose Room"
+                        searchPlaceholder="Search rooms…"
+                      />
                     </div>
                     <div className="flex items-end pb-1">
                       <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white font-bold h-9">
@@ -696,11 +705,13 @@ export default function ToursPage() {
               </div>
               <div>
                 <Label className="text-[10px] uppercase font-bold text-slate-400">Tour Type *</Label>
-                <select value={tourType} onChange={(e) => setTourType(e.target.value)} className="w-full mt-1.5 h-9 rounded border px-2 focus:outline-none">
-                  {TOUR_TYPES.map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  value={tourType}
+                  onValueChange={setTourType}
+                  options={TOUR_TYPE_OPTIONS}
+                  placeholder="Select Tour Type"
+                  className="mt-1.5"
+                />
               </div>
             </div>
 
@@ -770,11 +781,13 @@ export default function ToursPage() {
               </div>
               <div>
                 <Label className="text-[10px] uppercase font-bold text-slate-400">Sponsor Category *</Label>
-                <select value={sponsorCategory} onChange={(e) => setSponsorCategory(e.target.value)} className="w-full mt-1.5 h-9 rounded border px-2 focus:outline-none">
-                  {SPONSOR_CATEGORIES.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  value={sponsorCategory}
+                  onValueChange={setSponsorCategory}
+                  options={SPONSOR_CATEGORY_OPTIONS}
+                  placeholder="Select Sponsor Category"
+                  className="mt-1.5"
+                />
               </div>
             </div>
 
@@ -849,11 +862,13 @@ export default function ToursPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-[10px] uppercase font-bold text-slate-400">Blood Group *</Label>
-                <select value={bloodGroup} onChange={(e) => setBloodGroup(e.target.value)} className="w-full mt-1.5 h-9 rounded border px-2 focus:outline-none">
-                  {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(bg => (
-                    <option key={bg} value={bg}>{bg}</option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  value={bloodGroup}
+                  onValueChange={setBloodGroup}
+                  options={BLOOD_GROUP_OPTIONS}
+                  placeholder="Select Blood Group"
+                  className="mt-1.5"
+                />
               </div>
               <div>
                 <Label className="text-[10px] uppercase font-bold text-slate-400">Emergency Phone contact *</Label>
@@ -911,11 +926,13 @@ export default function ToursPage() {
               </div>
               <div>
                 <Label className="text-[10px] uppercase font-bold text-slate-400">Room Type</Label>
-                <select value={roomType} onChange={(e) => setRoomType(e.target.value)} className="w-full mt-1.5 h-9 rounded border px-2 focus:outline-none">
-                  <option value="Standard">Standard</option>
-                  <option value="Hall">Hall</option>
-                  <option value="VIP">VIP</option>
-                </select>
+                <SearchableSelect
+                  value={roomType}
+                  onValueChange={setRoomType}
+                  options={toOptions(["Standard", "Hall", "VIP"])}
+                  placeholder="Select Room Type"
+                  className="mt-1.5"
+                />
               </div>
               <div>
                 <Label className="text-[10px] uppercase font-bold text-slate-400">Bed Capacity *</Label>
@@ -966,13 +983,17 @@ export default function ToursPage() {
                     </div>
                     <div>
                       <Label className="text-[9px] text-slate-455 uppercase font-black">Attendance</Label>
-                      <select value={bulkAttendance[p.id] ?? "PRESENT"}
-                        onChange={(e) => setBulkAttendance(prev => ({ ...prev, [p.id]: e.target.value }))}
-                        className="h-8 rounded border text-xs px-2 bg-white focus:outline-none">
-                        <option value="PRESENT">Present</option>
-                        <option value="ABSENT">Absent</option>
-                        <option value="NOT_WELL">Not Well</option>
-                      </select>
+                      <SearchableSelect
+                        value={bulkAttendance[p.id] ?? "PRESENT"}
+                        onValueChange={(val) => setBulkAttendance(prev => ({ ...prev, [p.id]: val }))}
+                        options={[
+                          { value: "PRESENT", label: "Present" },
+                          { value: "ABSENT", label: "Absent" },
+                          { value: "NOT_WELL", label: "Not Well" },
+                        ]}
+                        placeholder="Select"
+                        className="w-24 text-[10px]"
+                      />
                     </div>
                   </div>
                 </div>

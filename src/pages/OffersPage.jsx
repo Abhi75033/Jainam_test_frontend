@@ -37,13 +37,10 @@ import {
 import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { OFFER_CATEGORY_OPTIONS } from "@/constants/dropdownOptions";
 
-const OFFER_CATEGORIES = [
-  "Food", "Travel", "Healthcare", "Property", "Jewellery", "Automobile",
-  "Education", "Fashion & Lifestyle", "Electronics", "Banking & Finance",
-  "Home Services", "Fitness & Wellness", "Entertainment", "Charity",
-  "Professional Services", "Shopping", "Religious", "Others"
-];
+// OFFER_CATEGORIES imported from @/constants/dropdownOptions
 
 const standardDisclaimer = "Disclaimer: JiNANAM only provides a platform for businesses to showcase their offers. JiNANAM does not guarantee, endorse, verify, or take responsibility for the quality, availability, pricing, products, services, disputes, losses, damages, or claims arising from these offers. Members are advised to verify all information directly with the respective business before making any purchase or transaction.";
 
@@ -593,11 +590,13 @@ export default function OffersPage() {
               </div>
               <div>
                 <Label className="text-[10px] uppercase font-bold text-slate-400">Offer Category *</Label>
-                <select value={offerCategory} onChange={(e) => setOfferCategory(e.target.value)} className="w-full mt-1.5 h-9 rounded border px-2 focus:outline-none">
-                  {OFFER_CATEGORIES.map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  value={offerCategory}
+                  onValueChange={setOfferCategory}
+                  options={OFFER_CATEGORY_OPTIONS}
+                  placeholder="Select Category"
+                  className="mt-1.5"
+                />
               </div>
             </div>
 
@@ -699,11 +698,13 @@ export default function OffersPage() {
               </div>
               <div>
                 <Label className="text-[10px] uppercase font-bold text-slate-400">Offer Category *</Label>
-                <select value={offerCategory} onChange={(e) => setOfferCategory(e.target.value)} className="w-full mt-1.5 h-9 rounded border px-2 focus:outline-none">
-                  {OFFER_CATEGORIES.map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  value={offerCategory}
+                  onValueChange={setOfferCategory}
+                  options={OFFER_CATEGORY_OPTIONS}
+                  placeholder="Select Category"
+                  className="mt-1.5"
+                />
               </div>
             </div>
 

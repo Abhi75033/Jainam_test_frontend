@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, MapPin } from "lucide-react";
 import { toast } from "sonner";
@@ -115,16 +115,14 @@ export default function RoutesPage() {
           <div className="space-y-3 pt-2">
             <div>
               <Label className="text-xs">Monk / Sadhvi *</Label>
-              <Select value={form.monkId} onValueChange={(val) => setForm({ ...form, monkId: val })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a monk" />
-                </SelectTrigger>
-                <SelectContent>
-                  {monks.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>{m.dikshaName} ({m.publicId})</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={form.monkId}
+                onValueChange={(val) => setForm({ ...form, monkId: val })}
+                options={monks.map((m) => ({ value: m.id, label: `${m.dikshaName} (${m.publicId})` }))}
+                placeholder="Select a monk"
+                searchPlaceholder="Search monks…"
+                className="mt-1"
+              />
             </div>
             <div><Label className="text-xs">Route Name *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Mumbai-Pune Highway Route" /></div>
             <div className="grid grid-cols-2 gap-3">

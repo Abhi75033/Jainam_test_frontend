@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Loader2 } from "lucide-react";
 import { api, extractErrorMessage } from "@/lib/api";
 import { toast } from "sonner";
@@ -98,19 +98,14 @@ export function EntityFormDialog({
                   data-testid={`${testId}-${f.name}`}
                 />
               ) : f.type === "select" ? (
-                <Select
+                <SearchableSelect
                   value={values[f.name] || ""}
                   onValueChange={(v) => setField(f.name, v)}
-                >
-                  <SelectTrigger className="mt-1" data-testid={`${testId}-${f.name}`}>
-                    <SelectValue placeholder={f.placeholder || `Select ${f.label}`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(f.options || []).map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={f.options || []}
+                  placeholder={f.placeholder || `Select ${f.label}`}
+                  className="mt-1"
+                  data-testid={`${testId}-${f.name}`}
+                />
               ) : f.type === "switch" ? (
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-xs text-muted-foreground">{f.placeholder}</span>

@@ -14,7 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Moon, Sun, Star, Plus, AlertTriangle, Loader2, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { MONTHS, getYearOptions } from "@/constants/dropdownOptions";
 
 export default function CalendarPage() {
   const { isSuperAdmin } = useAuth();
@@ -137,44 +138,30 @@ export default function CalendarPage() {
           <span className="text-sm font-semibold text-slate-800">Filter View</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={selectedTypeId} onValueChange={setSelectedTypeId}>
-            <SelectTrigger className="w-44 h-9 text-xs font-semibold bg-white border border-border">
-              <SelectValue placeholder="Calendar Type" />
-            </SelectTrigger>
-            <SelectContent>
-              {types.map((t) => (
-                <SelectItem key={t.id} value={t.id} className="text-xs font-medium">
-                  {t.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            value={selectedTypeId}
+            onValueChange={setSelectedTypeId}
+            options={types.map((t) => ({ value: t.id, label: t.name }))}
+            placeholder="Calendar Type"
+            searchPlaceholder="Search type…"
+            className="w-44"
+          />
 
-          <Select value={selectedMonth.toString()} onValueChange={(val) => setSelectedMonth(Number(val))}>
-            <SelectTrigger className="w-32 h-9 text-xs font-semibold bg-white border border-border">
-              <SelectValue placeholder="Month" />
-            </SelectTrigger>
-            <SelectContent>
-              {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map((m, idx) => (
-                <SelectItem key={idx + 1} value={(idx + 1).toString()} className="text-xs font-medium">
-                  {m}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            value={selectedMonth.toString()}
+            onValueChange={(val) => setSelectedMonth(Number(val))}
+            options={MONTHS}
+            placeholder="Month"
+            className="w-32"
+          />
 
-          <Select value={selectedYear.toString()} onValueChange={(val) => setSelectedYear(Number(val))}>
-            <SelectTrigger className="w-24 h-9 text-xs font-semibold bg-white border border-border">
-              <SelectValue placeholder="Year" />
-            </SelectTrigger>
-            <SelectContent>
-              {[2024, 2025, 2026, 2027, 2028].map((y) => (
-                <SelectItem key={y} value={y.toString()} className="text-xs font-medium">
-                  {y}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            value={selectedYear.toString()}
+            onValueChange={(val) => setSelectedYear(Number(val))}
+            options={getYearOptions(3, 3)}
+            placeholder="Year"
+            className="w-24"
+          />
         </div>
       </Card>
 

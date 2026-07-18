@@ -14,6 +14,11 @@ import {
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import {
+  INDIAN_STATE_OPTIONS, ORG_TYPE_OPTIONS,
+  toOptions,
+} from "@/constants/dropdownOptions";
 
 const FACILITY_OPTIONS = [
   "Parking", "CCTV", "Lift", "AC", "Cafeteria", "Medical", "Library", "Ramp", "Wheelchair Access",
@@ -56,32 +61,26 @@ const MURTIPUJAK_GACCHAS = [
 ];
 const MemberSelect = ({ label, value, onChange, placeholder = "Select Member..." }) => {
   const [members, setMembers] = useState([]);
-  const [search, setSearch] = useState("");
   useEffect(() => {
     api.get("/members", { params: { pageSize: 500 } })
       .then((r) => setMembers(r.data?.data?.items || r.data?.data || []))
       .catch(() => {});
   }, []);
-  const filtered = members.filter(m => 
-    m.fullName?.toLowerCase().includes(search.toLowerCase()) ||
-    m.mobile?.includes(search) ||
-    m.publicId?.toLowerCase().includes(search.toLowerCase())
-  );
+
   return (
     <div>
       <Label className="text-xs font-semibold text-slate-600">{label}</Label>
-      <div className="mt-1 space-y-1">
-        <Input placeholder="Type name / mobile / Member ID to search..." value={search} onChange={e => setSearch(e.target.value)} className="h-8 text-xs bg-white" />
-        <select className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none"
-          value={value || ""} onChange={e => onChange(e.target.value)}>
-          <option value="">{placeholder}</option>
-          {filtered.map(m => (
-            <option key={m.id} value={m.id}>
-              {m.fullName} ({m.publicId || "No ID"}) - {m.mobile || "No phone"}
-            </option>
-          ))}
-        </select>
-      </div>
+      <SearchableSelect
+        value={value || ""}
+        onValueChange={onChange}
+        options={members.map(m => ({
+          value: m.id,
+          label: `${m.fullName} (${m.publicId || "No ID"}) - ${m.mobile || "No phone"}`
+        }))}
+        placeholder={placeholder}
+        searchPlaceholder="Search members…"
+        className="mt-1"
+      />
     </div>
   );
 };
@@ -1200,12 +1199,16 @@ export default function OrgListPage({
                 <Input value={deityName} onChange={(e) => setDeityName(e.target.value)} placeholder="e.g. Shri Nakoda Parshvanath" className="mt-1 h-9 bg-white" required />
               </div>
               <div>
-                <Label className="text-[10px] uppercase font-bold text-slate-400">Category *</Label>
-                <select className="w-full mt-1 h-9 rounded-md border border-slate-205 bg-white px-3 text-sm focus:outline-none"
-                  value={deityCategory} onChange={(e) => setDeityCategory(e.target.value)}>
-                  <option value="24 Tirthankars">24 Tirthankars</option>
-                  <option value="Others">Others</option>
-                </select>
+                <SearchableSelect
+                  value={deityCategory}
+                  onValueChange={setDeityCategory}
+                  options={[
+                    { value: "24 Tirthankars", label: "24 Tirthankars" },
+                    { value: "Others", label: "Others" },
+                  ]}
+                  placeholder="Select Category"
+                  className="mt-1"
+                />
               </div>
             </div>
             <DialogFooter className="gap-2">
