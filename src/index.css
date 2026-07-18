@@ -1,0 +1,206 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Work+Sans:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+    margin: 0;
+    font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+}
+
+code {
+    font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+@layer base {
+    :root {
+        /* Warm off-white background */
+        --background: 30 25% 98%;
+        --foreground: 0 0% 10%;
+
+        --card: 0 0% 100%;
+        --card-foreground: 0 0% 10%;
+
+        --popover: 0 0% 100%;
+        --popover-foreground: 0 0% 10%;
+
+        /* Saffron primary */
+        --primary: 24 90% 42%;
+        --primary-foreground: 0 0% 100%;
+
+        --secondary: 30 20% 96%;
+        --secondary-foreground: 0 0% 10%;
+
+        --muted: 30 15% 96%;
+        --muted-foreground: 0 0% 40%;
+
+        --accent: 30 40% 94%;
+        --accent-foreground: 0 0% 10%;
+
+        --destructive: 0 84% 60%;
+        --destructive-foreground: 0 0% 100%;
+
+        --border: 30 10% 90%;
+        --input: 30 10% 90%;
+        --ring: 24 90% 42%;
+
+        /* Charts (saffron / maroon / gold family) */
+        --chart-1: 24 90% 50%;
+        --chart-2: 351 40% 32%;
+        --chart-3: 40 78% 55%;
+        --chart-4: 173 58% 39%;
+        --chart-5: 197 37% 34%;
+
+        --radius: 0.5rem;
+
+        /* Brand tokens */
+        --saffron: 24 90% 42%;
+        --saffron-soft: 30 90% 92%;
+        --maroon: 351 40% 32%;
+        --gold: 40 78% 55%;
+
+        /* Navy sidebar theme */
+        --sidebar-bg: 226 55% 22%;
+        --sidebar-bg-2: 226 60% 17%;
+        --sidebar-fg: 210 40% 96%;
+        --sidebar-muted: 215 30% 72%;
+        --sidebar-active-bg: 45 96% 58%;
+        --sidebar-active-fg: 226 60% 17%;
+
+        /* Vivid category colors for icons/badges */
+        --c-green: 152 65% 42%;
+        --c-orange: 32 95% 55%;
+        --c-blue: 217 91% 55%;
+        --c-purple: 262 65% 55%;
+        --c-red: 0 78% 58%;
+        --c-teal: 178 65% 42%;
+        --c-pink: 328 76% 60%;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+    body {
+        @apply bg-background text-foreground;
+    }
+    h1, h2, h3, h4 {
+        font-family: 'Work Sans', system-ui, sans-serif;
+        letter-spacing: -0.01em;
+    }
+    .font-brand {
+        font-family: 'Cormorant Garamond', Georgia, serif;
+        letter-spacing: -0.01em;
+    }
+    .font-mono-num {
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+/* Scrollbar polish */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: hsl(30 10% 85%);
+    border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: hsl(30 10% 75%);
+}
+
+/* Sidebar active state — legacy (unused after redesign) */
+.sidebar-active {
+    background: hsl(var(--saffron-soft));
+    color: hsl(var(--saffron));
+    border-left: 3px solid hsl(var(--saffron));
+}
+
+/* Navy sidebar (new) */
+.sidebar-navy {
+    background: linear-gradient(180deg, hsl(var(--sidebar-bg)) 0%, hsl(var(--sidebar-bg-2)) 100%) !important;
+    color: hsl(var(--sidebar-fg)) !important;
+    display: flex !important;
+}
+.sidebar-navy .side-item {
+    color: hsl(var(--sidebar-fg));
+}
+.sidebar-navy .side-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+.sidebar-navy .side-item.active {
+    background: hsl(var(--sidebar-active-bg));
+    color: hsl(var(--sidebar-active-fg));
+    font-weight: 600;
+    box-shadow: 0 4px 14px rgba(250, 204, 21, 0.25);
+}
+.sidebar-navy .side-group {
+    color: hsl(var(--sidebar-muted));
+}
+
+/* Icon color utility (colored circle backgrounds) */
+.icon-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+}
+.icon-chip.green { background: hsl(var(--c-green) / 0.15); color: hsl(var(--c-green)); }
+.icon-chip.orange { background: hsl(var(--c-orange) / 0.15); color: hsl(var(--c-orange)); }
+.icon-chip.blue { background: hsl(var(--c-blue) / 0.15); color: hsl(var(--c-blue)); }
+.icon-chip.purple { background: hsl(var(--c-purple) / 0.15); color: hsl(var(--c-purple)); }
+.icon-chip.red { background: hsl(var(--c-red) / 0.15); color: hsl(var(--c-red)); }
+.icon-chip.teal { background: hsl(var(--c-teal) / 0.15); color: hsl(var(--c-teal)); }
+.icon-chip.pink { background: hsl(var(--c-pink) / 0.15); color: hsl(var(--c-pink)); }
+.icon-chip.saffron { background: hsl(var(--saffron) / 0.15); color: hsl(var(--saffron)); }
+
+/* Backward-compat legacy tones used by earlier pages */
+.icon-chip.primary { background: hsl(var(--saffron) / 0.15); color: hsl(var(--saffron)); }
+.icon-chip.success { background: hsl(var(--c-green) / 0.15); color: hsl(var(--c-green)); }
+.icon-chip.warning { background: hsl(var(--c-orange) / 0.15); color: hsl(var(--c-orange)); }
+.icon-chip.danger { background: hsl(var(--c-red) / 0.15); color: hsl(var(--c-red)); }
+.icon-chip.default { background: hsl(var(--c-blue) / 0.15); color: hsl(var(--c-blue)); }
+
+/* Solid variants for hero cards */
+.icon-chip-solid.green { background: hsl(var(--c-green)); color: white; }
+.icon-chip-solid.orange { background: hsl(var(--c-orange)); color: white; }
+.icon-chip-solid.blue { background: hsl(var(--c-blue)); color: white; }
+.icon-chip-solid.purple { background: hsl(var(--c-purple)); color: white; }
+.icon-chip-solid.red { background: hsl(var(--c-red)); color: white; }
+
+/* Glass topbar */
+.glass-topbar {
+    background: rgba(253, 252, 251, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+
+/* Page fade-in */
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+    animation: fadeUp 0.24s ease-out;
+}
+
+/* Login hero overlay */
+.login-hero-overlay {
+    background: linear-gradient(135deg, rgba(114, 47, 55, 0.55) 0%, rgba(211, 84, 0, 0.55) 100%);
+}
+
+@layer base {
+    [data-debug-wrapper="true"] {
+        display: contents !important;
+    }
+}

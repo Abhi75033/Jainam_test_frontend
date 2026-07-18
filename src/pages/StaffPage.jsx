@@ -1,0 +1,1241 @@
+import { useEffect, useState, useRef } from "react";
+import { api, extractErrorMessage, API_BASE } from "@/lib/api";
+import { PageHeader } from "@/components/common/PageHeader";
+import { DataTable } from "@/components/common/DataTable";
+import { StatusBadge } from "@/components/common/StatusBadge";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Search,
+  UserPlus,
+  LogIn,
+  LogOut,
+  Calendar,
+  Check,
+  X,
+  Clock,
+  FileText,
+  Lock,
+  QrCode,
+  Download,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  Phone,
+  Mail,
+  MapPin,
+  AlertCircle,
+  Heart,
+  User,
+  Building,
+  Printer,
+  Trash2,
+  AlertTriangle,
+  Plus,
+  Settings,
+  ChevronRight,
+  TrendingUp,
+  Briefcase,
+  FileSpreadsheet,
+  Activity
+} from "lucide-react";
+import { formatDate, formatDateTime, initials } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { useOrgs } from "@/hooks/useOrgs";
+import { OrgSelect } from "@/components/common/OrgSelect";
+import { toast } from "sonner";
+
+const WORK_CATEGORIES = [
+  "Temple Staff", "Dharamshala Staff", "Bhojanshala Staff", "Security Guard",
+  "Housekeeping", "Poojari", "Manager", "Office Staff", "Maintenance",
+  "Driver", "Gardener", "Electrician", "Plumber", "Volunteer Staff", "Other"
+];
+
+const LEAVE_TYPES = [
+  "Casual Leave", "Sick Leave", "Paid Leave", "Unpaid Leave", "Emergency Leave"
+];
+
+export default function StaffPage() {
+  const { canDo, user, isSuperAdmin } = useAuth();
+  const { orgs } = useOrgs();
+  const [selectedOrg, setSelectedOrg] = useState("");
+  const orgId = user?.organizationIds?.[0] || selectedOrg || (isSuperAdmin ? orgs[0]?.id : undefined);
+
+  // States
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
+  
+  // Dashboard Metrics & Timings Config
+  const [metrics, setMetrics] = useState({
+    total: 0, active: 0, inactive: 0, present: 0, absent: 0, onLeave: 0,
+    yetToCheckOut: 0, newThisMonth: 0, docsExpiringSoon: 0
+  });
+  const [timings, setTimings] = useState({ start: "09:00", end: "18:00", late: "09:30", early: "17:30" });
+  const [updatingTimings, setUpdatingTimings] = useState(false);
+
+  // Dialog Toggles
+  const [addOpen, setAddOpen] = useState(false);
+  const [detailStaff, setDetailStaff] = useState(null);
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [qrTokenData, setQrTokenData] = useState(null);
+  
+  // Attendance Override dialog
+  const [attendanceOpen, setAttendanceOpen] = useState(false);
+  const [selectedStaffForAtt, setSelectedStaffForAtt] = useState(null);
+  const [manualAttStatus, setManualAttStatus] = useState("PRESENT");
+  const [manualAttHours, setManualAttHours] = useState(8);
+
+  // Documents dialog
+  const [docModalOpen, setDocModalOpen] = useState(false);
+  const [newDocType, setNewDocType] = useState("Aadhaar Card");
+  const [newDocNumber, setNewDocNumber] = useState("");
+  const [newDocExpiry, setNewDocExpiry] = useState("");
+  const [newDocUrl, setNewDocUrl] = useState("");
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+
+  // Leave Dialog
+  const [leaveModalOpen, setLeaveModalOpen] = useState(false);
+  const [leaveType, setLeaveType] = useState("Casual Leave");
+  const [leaveStart, setLeaveStart] = useState("");
+  const [leaveEnd, setLeaveEnd] = useState("");
+  const [leaveReason, setLeaveReason] = useState("");
+  const [applyingLeave, setApplyingLeave] = useState(false);
+
+  // Department / Designation master cache
+  const [depts, setDepts] = useState([]);
+  const [designations, setDesignations] = useState([]);
+  
+  // Form Registration fields
+  const [wizardTab, setWizardTab] = useState("personal");
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    organizationId: "",
+    name: "",
+    mobile: "",
+    email: "",
+    gender: "Male",
+    dob: "",
+    joiningDate: "",
+    category: "Temple Staff",
+    categorySpecify: "",
+    departmentId: "",
+    designationId: "",
+    reportingTo: "",
+    aadhaar: "",
+    pan: "",
+    currentAddress: { line: "", area: "", city: "", state: "", country: "India", pincode: "" },
+    permanentAddress: { line: "", area: "", city: "", state: "", country: "India", pincode: "" },
+    sameAsCurrent: false,
+    emergencyName: "",
+    emergencyRelation: "",
+    emergencyMobile: "",
+    bloodGroup: "O+",
+    medicalConditions: "",
+    allergies: "",
+    govtDocs: [],
+    modulePermissions: []
+  });
+
+  const loadData = async () => {
+    if (!orgId) { setLoading(false); return; }
+    setLoading(true);
+    try {
+      const statsRes = await api.get(`/staff/dashboard/${orgId}`);
+      const listRes = await api.get(`/staff/org/${orgId}`);
+      
+      setMetrics(statsRes.data?.data?.stats || statsRes.data?.data || metrics);
+      const conf = statsRes.data?.data?.config;
+      if (conf) {
+        setTimings({
+          start: conf.staffWorkingHoursStart || "09:00",
+          end: conf.staffWorkingHoursEnd || "18:00",
+          late: conf.staffLateArrivalAfter || "09:30",
+          early: conf.staffEarlyExitBefore || "17:30"
+        });
+      }
+
+      setRows(listRes.data?.data?.items || listRes.data?.data || []);
+      
+      // Load Masters
+      const deptsRes = await api.get("/master-data/staff-departments").catch(() => ({ data: { data: [] } }));
+      const desigRes = await api.get("/master-data/staff-designations").catch(() => ({ data: { data: [] } }));
+      setDepts(deptsRes.data?.data?.items || deptsRes.data?.data || []);
+      setDesignations(desigRes.data?.data?.items || desigRes.data?.data || []);
+    } catch (e) {
+      toast.error("Failed to load staff metrics");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId, reloadKey]);
+
+  useEffect(() => {
+    if (orgId && !form.organizationId) {
+      setForm((f) => ({ ...f, organizationId: orgId }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId]);
+
+  const handleCreateStaff = async (e) => {
+    e.preventDefault();
+    if (!form.name || !form.mobile) {
+      toast.error("Staff Name and Mobile Number are required.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        organizationId: orgId,
+        joiningDate: form.joiningDate ? new Date(form.joiningDate).toISOString() : undefined,
+        departmentId: form.departmentId || undefined,
+        designationId: form.designationId || undefined,
+        category: form.category,
+        categorySpecify: form.category === "Other" ? form.categorySpecify : undefined,
+        reportingTo: form.reportingTo || undefined,
+        dob: form.dob ? new Date(form.dob).toISOString() : undefined,
+        gender: form.gender,
+        addresses: form.currentAddress,
+        permanentAddress: form.sameAsCurrent ? form.currentAddress : form.permanentAddress,
+        aadhaar: form.aadhaar || undefined,
+        pan: form.pan || undefined,
+        emergencyMedicalInfo: {
+          emergencyName: form.emergencyName,
+          emergencyRelation: form.emergencyRelation,
+          emergencyMobile: form.emergencyMobile,
+          bloodGroup: form.bloodGroup,
+          medicalConditions: form.medicalConditions,
+          allergies: form.allergies
+        },
+        newMember: {
+          name: form.name,
+          mobile: form.mobile,
+          category: "JAIN"
+        }
+      };
+
+      await api.post("/staff", payload);
+      toast.success("Staff profile created and unique Staff ID auto-generated!");
+      setAddOpen(false);
+      setReloadKey(k => k + 1);
+      setForm({
+        organizationId: orgId, name: "", mobile: "", email: "", gender: "Male", dob: "", joiningDate: "",
+        category: "Temple Staff", categorySpecify: "", departmentId: "", designationId: "", reportingTo: "",
+        aadhaar: "", pan: "",
+        currentAddress: { line: "", area: "", city: "", state: "", country: "India", pincode: "" },
+        permanentAddress: { line: "", area: "", city: "", state: "", country: "India", pincode: "" },
+        sameAsCurrent: false, emergencyName: "", emergencyRelation: "", emergencyMobile: "", bloodGroup: "O+",
+        medicalConditions: "", allergies: "", govtDocs: [], modulePermissions: []
+      });
+    } catch (e) {
+      toast.error(extractErrorMessage(e) || "Failed to register staff");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdateTimings = async () => {
+    setUpdatingTimings(true);
+    try {
+      await api.patch(`/staff/org/${orgId}/settings`, timings);
+      toast.success("Standard Working Hours configuration updated.");
+      setReloadKey(k => k + 1);
+    } catch (e) {
+      toast.error(extractErrorMessage(e));
+    } finally {
+      setUpdatingTimings(false);
+    }
+  };
+
+  const showStaffQr = async (staffId) => {
+    try {
+      const res = await api.get(`/staff/me/qr`);
+      setQrTokenData(res.data?.data || null);
+      setQrModalOpen(true);
+    } catch (err) {
+      toast.error("Failed to generate QR signature.");
+    }
+  };
+
+  const handleManualAttendance = async () => {
+    if (!selectedStaffForAtt) return;
+    try {
+      await api.post(`/staff/${selectedStaffForAtt.id}/manual-attendance`, {
+        date: new Date(),
+        status: manualAttStatus,
+        workingHours: Number(manualAttHours)
+      });
+      toast.success(`Attendance successfully logged override for ${selectedStaffForAtt.member?.fullName}`);
+      setAttendanceOpen(false);
+      setReloadKey(k => k + 1);
+    } catch (e) {
+      toast.error(extractErrorMessage(e));
+    }
+  };
+
+  const handleUploadDocument = async () => {
+    if (!detailStaff || !newDocNumber) return;
+    setUploadingDoc(true);
+    try {
+      await api.post(`/staff/${detailStaff.id}/documents`, {
+        docType: newDocType,
+        docNumber: newDocNumber,
+        imageUrl: newDocUrl || "attached_doc_placeholder.png",
+        expiryDate: newDocExpiry ? new Date(newDocExpiry).toISOString() : undefined
+      });
+      toast.success("Document uploaded. Preserving document replace audit logs.");
+      setDocModalOpen(false);
+      setNewDocNumber("");
+      setNewDocExpiry("");
+      setNewDocUrl("");
+      setReloadKey(k => k + 1);
+    } catch (e) {
+      toast.error(extractErrorMessage(e));
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
+  const handleApplyLeave = async () => {
+    if (!detailStaff || !leaveStart) return;
+    setApplyingLeave(true);
+    try {
+      await api.post(`/staff/me/leaves`, {
+        type: leaveType,
+        startDate: new Date(leaveStart).toISOString(),
+        endDate: new Date(leaveEnd || leaveStart).toISOString(),
+        reason: leaveReason
+      });
+      toast.success("Leave request submitted successfully.");
+      setLeaveModalOpen(false);
+      setLeaveReason("");
+      setReloadKey(k => k + 1);
+    } catch (e) {
+      toast.error(extractErrorMessage(e));
+    } finally {
+      setApplyingLeave(false);
+    }
+  };
+
+  const handleDecideLeave = async (leaveId, status) => {
+    try {
+      await api.patch(`/staff/leaves/${leaveId}`, { status });
+      toast.success(`Leave request status updated: ${status}`);
+      setReloadKey(k => k + 1);
+    } catch (e) {
+      toast.error(extractErrorMessage(e));
+    }
+  };
+
+  const handleExportReports = async (type, format) => {
+    try {
+      const token = localStorage.getItem("jinanam_access_token");
+      const res = await fetch(`${API_BASE}/staff/org/${orgId}/reports/export?reportType=${type}&format=${format}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error("Report compilation failed");
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `staff-${type}-${orgId}-${new Date().toISOString().slice(0, 10)}.${format === "xlsx" ? "xlsx" : "csv"}`;
+      a.click();
+      toast.success("Report file downloaded successfully.");
+    } catch (e) {
+      toast.error("Download failed");
+    }
+  };
+
+  const filtered = q
+    ? rows.filter(
+        (r) =>
+          r.publicId?.toLowerCase().includes(q.toLowerCase()) ||
+          r.member?.fullName?.toLowerCase().includes(q.toLowerCase()) ||
+          r.category?.toLowerCase().includes(q.toLowerCase())
+      )
+    : rows;
+
+  const columns = [
+    { key: "publicId", header: "Staff ID", render: (r) => <Badge variant="outline" className="font-mono text-[9px]">{r.publicId || "—"}</Badge> },
+    {
+      key: "name",
+      header: "Name",
+      render: (r) => (
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-500 overflow-hidden border">
+            {r.member?.photoUrl ? <img src={r.member.photoUrl} alt="" className="h-full w-full object-cover" /> : initials(r.member?.fullName || "")}
+          </div>
+          <div>
+            <div className="font-semibold text-slate-800 text-xs">{r.member?.fullName || "—"}</div>
+            <div className="text-[10px] text-slate-400 font-mono-num">{r.member?.mobile}</div>
+          </div>
+        </div>
+      )
+    },
+    { key: "category", header: "Category", render: (r) => <Badge variant="secondary" className="text-[9px]">{r.category || "Staff"}</Badge> },
+    { key: "reporting", header: "Reporting To", render: (r) => <span className="text-slate-500 font-medium text-xs">{r.reportingTo || "Admin"}</span> },
+    { key: "joining", header: "Joining Date", render: (r) => <span className="text-slate-500 font-mono text-xs">{formatDate(r.joiningDate)}</span> },
+    {
+      key: "status",
+      header: "Employment",
+      render: (r) => (
+        <Badge variant={r.employmentStatus === "ACTIVE" ? "success" : "destructive"} className="text-[9px]">
+          {r.employmentStatus}
+        </Badge>
+      )
+    },
+    {
+      key: "actions",
+      header: "Quick Actions",
+      render: (r) => (
+        <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+          <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => showStaffQr(r.publicId)}>
+            <QrCode className="h-3 w-3 mr-1" /> QR Badge
+          </Button>
+          <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => { setSelectedStaffForAtt(r); setAttendanceOpen(true); }}>
+            <Calendar className="h-3 w-3 mr-1" /> Override
+          </Button>
+        </div>
+      )
+    }
+  ];
+
+  return (
+    <div className="space-y-6" data-testid="staff-page">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-gradient-to-r from-teal-700 to-emerald-800 p-6 rounded-2xl text-white shadow-lg">
+        <div>
+          <div className="flex items-center gap-2">
+            <Building className="h-6 w-6 text-teal-200" />
+            <h1 className="font-heading text-2xl md:text-3xl font-bold tracking-tight">Staff Operations Center</h1>
+          </div>
+          <p className="text-teal-100 text-xs mt-1 max-w-lg">
+            Manage your facility staff register, attendance overrides, leaves log, document checks, and configurations.
+          </p>
+        </div>
+        <div className="flex items-center gap-3 shrink-0 flex-wrap">
+          {canDo("STAFF", "CREATE") && (
+            <Button
+              onClick={() => { setWizardTab("personal"); setAddOpen(true); }}
+              data-testid="staff-add-button"
+              className="bg-white hover:bg-teal-50 text-teal-700 font-bold h-10 px-5 shadow-md border border-white"
+            >
+              <UserPlus className="h-4 w-4 mr-2" /> Onboard New Staff
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {isSuperAdmin && (
+        <div className="max-w-xs">
+          <OrgSelect value={orgId} onChange={setSelectedOrg} label="Select Active Facility Location" testId="staff-org-select" />
+        </div>
+      )}
+
+      <Tabs defaultValue="dashboard">
+        <TabsList className="mb-4 bg-slate-100 p-1 rounded-xl">
+          <TabsTrigger value="dashboard" className="px-5 py-2 font-bold text-xs rounded-lg">📊 Staff Dashboard</TabsTrigger>
+          <TabsTrigger value="registry" className="px-5 py-2 font-bold text-xs rounded-lg">👤 Staff Registry ({rows.length})</TabsTrigger>
+          <TabsTrigger value="attendance_console" className="px-5 py-2 font-bold text-xs rounded-lg">📅 Daily Attendance Overrides</TabsTrigger>
+          <TabsTrigger value="leaves" className="px-5 py-2 font-bold text-xs rounded-lg">🏥 Leaves Manager</TabsTrigger>
+          <TabsTrigger value="config" className="px-5 py-2 font-bold text-xs rounded-lg">⚙️ Working Hours Config</TabsTrigger>
+        </TabsList>
+
+        {/* Tab 1: Staff Dashboard */}
+        <TabsContent value="dashboard" className="space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="p-4 bg-white border rounded-xl flex items-center gap-3 shadow-sm">
+              <div className="p-3 rounded-lg bg-teal-50 text-teal-700"><User className="h-5 w-5" /></div>
+              <div>
+                <div className="text-[10px] uppercase font-bold text-slate-400">Total Registered</div>
+                <div className="text-xl font-black text-slate-800">{metrics.total}</div>
+              </div>
+            </Card>
+            <Card className="p-4 bg-white border rounded-xl flex items-center gap-3 shadow-sm">
+              <div className="p-3 rounded-lg bg-emerald-50 text-emerald-700"><ShieldCheck className="h-5 w-5" /></div>
+              <div>
+                <div className="text-[10px] uppercase font-bold text-slate-400">Active Staff</div>
+                <div className="text-xl font-black text-slate-800">{metrics.active}</div>
+              </div>
+            </Card>
+            <Card className="p-4 bg-white border rounded-xl flex items-center gap-3 shadow-sm">
+              <div className="p-3 rounded-lg bg-sky-50 text-sky-700"><Clock className="h-5 w-5" /></div>
+              <div>
+                <div className="text-[10px] uppercase font-bold text-slate-400">Present Today</div>
+                <div className="text-xl font-black text-slate-800">{metrics.present}</div>
+              </div>
+            </Card>
+            <Card className="p-4 bg-white border rounded-xl flex items-center gap-3 shadow-sm">
+              <div className="p-3 rounded-lg bg-rose-50 text-rose-700"><AlertTriangle className="h-5 w-5 animate-pulse" /></div>
+              <div>
+                <div className="text-[10px] uppercase font-bold text-slate-400">Expiring Documents</div>
+                <div className="text-xl font-black text-rose-700">{metrics.docsExpiringSoon}</div>
+              </div>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-12 gap-5">
+            {/* Quick Actions Panel */}
+            <Card className="col-span-12 md:col-span-4 p-5 bg-white border rounded-xl shadow-sm space-y-4">
+              <h3 className="font-bold text-sm text-slate-800">Quick Operations</h3>
+              <div className="grid grid-cols-1 gap-2 text-xs">
+                <Button variant="outline" className="justify-start h-10 font-bold" onClick={() => { setWizardTab("personal"); setAddOpen(true); }}>
+                  <UserPlus className="h-4 w-4 mr-2.5 text-teal-600" /> Onboard New Staff Profile
+                </Button>
+                <Button variant="outline" className="justify-start h-10 font-bold" onClick={() => handleExportReports("register", "xlsx")}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2.5 text-emerald-600" /> Export Excel Staff Register
+                </Button>
+                <Button variant="outline" className="justify-start h-10 font-bold" onClick={() => handleExportReports("attendance", "csv")}>
+                  <Download className="h-4 w-4 mr-2.5 text-sky-600" /> Export CSV Attendance Log
+                </Button>
+                <Button variant="outline" className="justify-start h-10 font-bold" onClick={() => handleExportReports("leaves", "csv")}>
+                  <Calendar className="h-4 w-4 mr-2.5 text-indigo-600" /> Export Leave Ledger
+                </Button>
+              </div>
+            </Card>
+
+            {/* Expiring Docs Warning panel */}
+            <Card className="col-span-12 md:col-span-8 p-5 bg-white border rounded-xl shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b pb-2">
+                <h3 className="font-bold text-sm text-slate-800 flex items-center gap-1.5"><ShieldAlert className="h-4 w-4 text-orange-500" /> Identity Audit Notices</h3>
+                {metrics.docsExpiringSoon > 0 && <Badge className="bg-orange-100 text-orange-850">Expiring Soon ({metrics.docsExpiringSoon})</Badge>}
+              </div>
+              <div className="space-y-2.5 max-h-56 overflow-y-auto text-xs text-slate-500">
+                {metrics.docsExpiringSoon === 0 ? (
+                  <div className="p-4 text-center text-slate-400">All document clearances are active and verified.</div>
+                ) : (
+                  rows.filter(r => (r.documents || []).some(d => d.expiryDate && new Date(d.expiryDate).getTime() < new Date().getTime() + 30 * 24 * 3600 * 1000)).map((s, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 rounded-lg border border-orange-100 bg-orange-50/50">
+                      <div>
+                        <div className="font-bold text-slate-800">{s.member?.fullName} ({s.publicId})</div>
+                        <div className="text-[10px] text-slate-400 font-mono-num">
+                          Expiring: {(s.documents || []).map(d => `${d.docType}`).join(", ")}
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => { setDetailStaff(s); setDocModalOpen(true); }}>
+                        Replace Doc
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Tab 2: Registry Grid */}
+        <TabsContent value="registry" className="space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="relative max-w-xs w-full">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search staff registry ID, category..."
+                className="pl-8 text-xs bg-slate-50 border-slate-205 h-9 rounded-lg"
+              />
+            </div>
+          </div>
+
+          <DataTable
+            columns={columns}
+            rows={filtered}
+            loading={loading}
+            testId="staff-table"
+            emptyTitle="No staff onboarded"
+            emptyDescription="Registered facility profiles will display here."
+            onRowClick={(s) => setDetailStaff(s)}
+          />
+        </TabsContent>
+
+        {/* Tab 3: Attendance Overrides */}
+        <TabsContent value="attendance_console" className="space-y-4">
+          <Card className="p-4 bg-white border rounded-xl shadow-sm space-y-4">
+            <div>
+              <h3 className="font-bold text-sm text-slate-800">Admin Attendance Logs Override</h3>
+              <p className="text-[11px] text-slate-400">Select a staff registry record below to override their attendance log for today.</p>
+            </div>
+            
+            <DataTable
+              columns={[
+                { key: "publicId", header: "Staff ID", render: (r) => <Badge variant="outline" className="font-mono text-[9px]">{r.publicId}</Badge> },
+                { key: "name", header: "Staff Name", render: (r) => <span className="font-semibold text-slate-800 text-xs">{r.member?.fullName}</span> },
+                { key: "category", header: "Category", render: (r) => <span className="text-slate-600 text-xs">{r.category}</span> },
+                {
+                  key: "actions",
+                  header: "Attendance Action",
+                  render: (r) => (
+                    <Button
+                      size="sm"
+                      className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold h-7 text-[10px]"
+                      onClick={() => { setSelectedStaffForAtt(r); setAttendanceOpen(true); }}
+                    >
+                      Override Status
+                    </Button>
+                  )
+                }
+              ]}
+              rows={rows}
+              loading={loading}
+              emptyTitle="No staff registered"
+              emptyDescription="Register staff profiles to enable manual attendance configurations."
+            />
+          </Card>
+        </TabsContent>
+
+        {/* Tab 4: Leave Approvals Portal */}
+        <TabsContent value="leaves" className="space-y-4">
+          <Card className="p-4 bg-white border rounded-xl shadow-sm space-y-4">
+            <div>
+              <h3 className="font-bold text-sm text-slate-800">Staff Leave Ledger & Approval Requests</h3>
+              <p className="text-[11px] text-slate-400">Approve or reject leave logs submitted by organization staff.</p>
+            </div>
+
+            <DataTable
+              columns={[
+                {
+                  key: "staff",
+                  header: "Staff Profile",
+                  render: (r) => (
+                    <div>
+                      <div className="font-bold text-slate-800 text-xs">{r.staff?.member?.fullName || "—"}</div>
+                      <div className="text-[9px] text-slate-400 font-mono-num">{r.staff?.publicId}</div>
+                    </div>
+                  )
+                },
+                { key: "type", header: "Leave Type", render: (r) => <Badge variant="secondary" className="text-[10px]">{r.type}</Badge> },
+                { key: "start", header: "Start Date", render: (r) => <span className="text-xs font-mono text-slate-500">{formatDate(r.startDate)}</span> },
+                { key: "end", header: "End Date", render: (r) => <span className="text-xs font-mono text-slate-500">{formatDate(r.endDate)}</span> },
+                { key: "reason", header: "Reason", render: (r) => <span className="text-xs text-slate-600 truncate max-w-xs block">{r.reason || "—"}</span> },
+                {
+                  key: "status",
+                  header: "Status",
+                  render: (r) => (
+                    <Badge variant={r.status === "APPROVED" ? "success" : r.status === "PENDING" ? "warning" : "destructive"}>
+                      {r.status}
+                    </Badge>
+                  )
+                },
+                {
+                  key: "actions",
+                  header: "Decisions",
+                  render: (r) => r.status === "PENDING" ? (
+                    <div className="flex gap-1">
+                      <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-7 text-[10px]" onClick={() => handleDecideLeave(r.id, "APPROVED")}>
+                        Approve
+                      </Button>
+                      <Button size="sm" className="bg-rose-600 hover:bg-rose-700 text-white font-bold h-7 text-[10px]" onClick={() => handleDecideLeave(r.id, "REJECTED")}>
+                        Reject
+                      </Button>
+                    </div>
+                  ) : <span className="text-slate-400 text-xs">—</span>
+                }
+              ]}
+              rows={rows.flatMap(s => (s.leaves || []).map(l => ({ ...l, staff: s })))}
+              loading={loading}
+              emptyTitle="No leave applications"
+              emptyDescription="Leaves ledger logs will display here."
+            />
+          </Card>
+        </TabsContent>
+
+        {/* Tab 5: Timings Configuration */}
+        <TabsContent value="config" className="space-y-4">
+          <Card className="p-5 bg-white border rounded-xl shadow-sm max-w-md space-y-4">
+            <div>
+              <h3 className="font-heading font-bold text-sm text-slate-800">Configure Standard Working Hours</h3>
+              <p className="text-[11px] text-slate-400">Used strictly for calculating lateness, overtime and early exits on audit logs.</p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <Label className="text-[10px] text-slate-400 uppercase font-bold">Shift Start Time</Label>
+                <Input type="time" value={timings.start} onChange={(e) => setTimings({ ...timings, start: e.target.value })} className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-[10px] text-slate-400 uppercase font-bold">Shift End Time</Label>
+                <Input type="time" value={timings.end} onChange={(e) => setTimings({ ...timings, end: e.target.value })} className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-[10px] text-slate-400 uppercase font-bold">Late Arrival Cutoff</Label>
+                <Input type="time" value={timings.late} onChange={(e) => setTimings({ ...timings, late: e.target.value })} className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-[10px] text-slate-400 uppercase font-bold">Early Exit Cutoff</Label>
+                <Input type="time" value={timings.early} onChange={(e) => setTimings({ ...timings, early: e.target.value })} className="mt-1" />
+              </div>
+            </div>
+
+            <Button onClick={handleUpdateTimings} disabled={updatingTimings} className="bg-teal-600 hover:bg-teal-700 text-white font-bold w-full h-9 text-xs">
+              {updatingTimings ? "Updating Timing Settings..." : "Save Working Hours Configurations"}
+            </Button>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Onboard Staff Wizard Modal */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="max-w-3xl p-0 overflow-hidden rounded-2xl shadow-2xl bg-white border border-slate-100 max-h-[85vh] flex flex-col">
+          <div className="flex border-b shrink-0">
+            {["personal", "employment", "emergency"].map(tab => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setWizardTab(tab)}
+                className={`flex-1 py-3 text-xs font-bold transition-all border-b-2 capitalize ${
+                  wizardTab === tab ? "border-teal-600 text-teal-700 bg-teal-50/20" : "border-transparent text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                {tab === "personal" ? "1. Personal Details" : tab === "employment" ? "2. Employment Details" : "3. Emergency Info"}
+              </button>
+            ))}
+          </div>
+
+          <form onSubmit={handleCreateStaff} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
+            {wizardTab === "personal" && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-slate-400">Staff Full Name *</Label>
+                    <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Anand Shah" required className="h-9" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-slate-400">Mobile Number *</Label>
+                    <Input value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} placeholder="e.g. 9876543210" required className="h-9" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-slate-400">Date of Birth</Label>
+                    <Input type="date" value={form.dob} onChange={(e) => setForm({ ...form, dob: e.target.value })} className="h-9" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-slate-400">Gender</Label>
+                    <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-slate-400">Email ID (Optional)</Label>
+                    <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="name@domain.com" className="h-9" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-slate-400">Aadhaar Card Number</Label>
+                    <Input value={form.aadhaar} onChange={(e) => setForm({ ...form, aadhaar: e.target.value })} placeholder="e.g. 1234 5678 9012" className="h-9" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-slate-400">PAN Number</Label>
+                    <Input value={form.pan} onChange={(e) => setForm({ ...form, pan: e.target.value })} placeholder="e.g. ABCDE1234F" className="h-9" />
+                  </div>
+                </div>
+
+                <div className="border-t pt-3 space-y-3">
+                  <h4 className="font-bold text-slate-700 text-xs">Current Residence Address</h4>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="col-span-2">
+                      <Label className="text-[10px] uppercase font-bold text-slate-400">Street / House</Label>
+                      <Input value={form.currentAddress.line} onChange={(e) => setForm({ ...form, currentAddress: { ...form.currentAddress, line: e.target.value } })} className="h-9" />
+                    </div>
+                    <div>
+                      <Label className="text-[10px] uppercase font-bold text-slate-400">Area</Label>
+                      <Input value={form.currentAddress.area} onChange={(e) => setForm({ ...form, currentAddress: { ...form.currentAddress, area: e.target.value } })} className="h-9" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    <div>
+                      <Label className="text-[10px] uppercase font-bold text-slate-400">City</Label>
+                      <Input value={form.currentAddress.city} onChange={(e) => setForm({ ...form, currentAddress: { ...form.currentAddress, city: e.target.value } })} className="h-9" />
+                    </div>
+                    <div>
+                      <Label className="text-[10px] uppercase font-bold text-slate-400">State</Label>
+                      <Input value={form.currentAddress.state} onChange={(e) => setForm({ ...form, currentAddress: { ...form.currentAddress, state: e.target.value } })} className="h-9" />
+                    </div>
+                    <div>
+                      <Label className="text-[10px] uppercase font-bold text-slate-400">Country</Label>
+                      <Input value={form.currentAddress.country} onChange={(e) => setForm({ ...form, currentAddress: { ...form.currentAddress, country: e.target.value } })} className="h-9" />
+                    </div>
+                    <div>
+                      <Label className="text-[10px] uppercase font-bold text-slate-400">Pincode</Label>
+                      <Input value={form.currentAddress.pincode} onChange={(e) => setForm({ ...form, currentAddress: { ...form.currentAddress, pincode: e.target.value } })} className="h-9" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <label className="flex items-center gap-2 font-semibold text-slate-700 cursor-pointer">
+                    <input type="checkbox" checked={form.sameAsCurrent} onChange={(e) => setForm({ ...form, sameAsCurrent: e.target.checked })} className="rounded border-slate-350 text-teal-650 h-3.5 w-3.5" />
+                    Permanent Address same as Current Address
+                  </label>
+                </div>
+
+                {!form.sameAsCurrent && (
+                  <div className="border-t pt-3 space-y-3">
+                    <h4 className="font-bold text-slate-700 text-xs">Permanent Address Details</h4>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-2">
+                        <Label className="text-[10px] uppercase font-bold text-slate-400">Street / House</Label>
+                        <Input value={form.permanentAddress.line} onChange={(e) => setForm({ ...form, permanentAddress: { ...form.permanentAddress, line: e.target.value } })} className="h-9" />
+                      </div>
+                      <div>
+                        <Label className="text-[10px] uppercase font-bold text-slate-400">Area</Label>
+                        <Input value={form.permanentAddress.area} onChange={(e) => setForm({ ...form, permanentAddress: { ...form.permanentAddress, area: e.target.value } })} className="h-9" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      <div>
+                        <Label className="text-[10px] uppercase font-bold text-slate-400">City</Label>
+                        <Input value={form.permanentAddress.city} onChange={(e) => setForm({ ...form, permanentAddress: { ...form.permanentAddress, city: e.target.value } })} className="h-9" />
+                      </div>
+                      <div>
+                        <Label className="text-[10px] uppercase font-bold text-slate-400">State</Label>
+                        <Input value={form.permanentAddress.state} onChange={(e) => setForm({ ...form, permanentAddress: { ...form.permanentAddress, state: e.target.value } })} className="h-9" />
+                      </div>
+                      <div>
+                        <Label className="text-[10px] uppercase font-bold text-slate-400">Country</Label>
+                        <Input value={form.permanentAddress.country} onChange={(e) => setForm({ ...form, permanentAddress: { ...form.permanentAddress, country: e.target.value } })} className="h-9" />
+                      </div>
+                      <div>
+                        <Label className="text-[10px] uppercase font-bold text-slate-400">Pincode</Label>
+                        <Input value={form.permanentAddress.pincode} onChange={(e) => setForm({ ...form, permanentAddress: { ...form.permanentAddress, pincode: e.target.value } })} className="h-9" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {wizardTab === "employment" && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-slate-400">Joining Date</Label>
+                    <Input type="date" value={form.joiningDate} onChange={(e) => setForm({ ...form, joiningDate: e.target.value })} className="h-9 animate-none" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-slate-400">Staff Category Designation *</Label>
+                    <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none" required>
+                      {WORK_CATEGORIES.map(v => (
+                        <option key={v} value={v}>{v}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {form.category === "Other" && (
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-slate-400">Please Specify Category Name *</Label>
+                    <Input value={form.categorySpecify} onChange={(e) => setForm({ ...form, categorySpecify: e.target.value })} placeholder="e.g. Yatra Coordinator" required className="h-9" />
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-slate-400">Reporting To (Manager / Admin Name)</Label>
+                    <Input value={form.reportingTo} onChange={(e) => setForm({ ...form, reportingTo: e.target.value })} placeholder="e.g. Ramesh Shah" className="h-9" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-slate-400">Department Assign</Label>
+                    <select value={form.departmentId} onChange={(e) => setForm({ ...form, departmentId: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
+                      <option value="">Select Department</option>
+                      {depts.map(d => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-slate-400">Designation Assign</Label>
+                    <select value={form.designationId} onChange={(e) => setForm({ ...form, designationId: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
+                      <option value="">Select Designation</option>
+                      {designations.map(d => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {wizardTab === "emergency" && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-slate-400">Emergency Contact Name</Label>
+                    <Input value={form.emergencyName} onChange={(e) => setForm({ ...form, emergencyName: e.target.value })} placeholder="e.g. Suresh Shah" className="h-9" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-slate-400">Emergency Relation</Label>
+                    <Input value={form.emergencyRelation} onChange={(e) => setForm({ ...form, emergencyRelation: e.target.value })} placeholder="e.g. Brother" className="h-9" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-slate-400">Emergency Contact Mobile</Label>
+                    <Input value={form.emergencyMobile} onChange={(e) => setForm({ ...form, emergencyMobile: e.target.value })} placeholder="e.g. 9876543210" className="h-9" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-slate-400">Blood Group</Label>
+                    <select value={form.bloodGroup} onChange={(e) => setForm({ ...form, bloodGroup: e.target.value })} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
+                      {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(v => (
+                        <option key={v} value={v}>{v}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-slate-400">Medical Conditions (Admins-only visibility)</Label>
+                    <Input value={form.medicalConditions} onChange={(e) => setForm({ ...form, medicalConditions: e.target.value })} placeholder="e.g. Hypertension" className="h-9" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-slate-400">Allergies</Label>
+                    <Input value={form.allergies} onChange={(e) => setForm({ ...form, allergies: e.target.value })} placeholder="e.g. Peanuts" className="h-9" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="gap-2 border-t pt-3 shrink-0">
+              <Button type="button" variant="ghost" onClick={() => setAddOpen(false)}>Cancel Onboarding</Button>
+              {wizardTab !== "emergency" ? (
+                <Button type="button" onClick={() => setWizardTab(wizardTab === "personal" ? "employment" : "emergency")} className="bg-slate-800 hover:bg-slate-900 text-white font-bold">
+                  Continue Form
+                </Button>
+              ) : (
+                <Button type="submit" disabled={saving} className="bg-teal-600 hover:bg-teal-700 text-white font-bold">
+                  {saving ? "Registering profile..." : "Confirm & Auto-generate unique Staff ID"}
+                </Button>
+              )}
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual Attendance Override Modal */}
+      <Dialog open={attendanceOpen} onOpenChange={setAttendanceOpen}>
+        <DialogContent className="sm:max-w-md text-xs">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-slate-800">
+              <Calendar className="h-5 w-5 text-indigo-600" /> Manual Attendance Override
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="p-3 bg-slate-50 border rounded-lg">
+              <div className="font-bold text-slate-800">{selectedStaffForAtt?.member?.fullName}</div>
+              <div className="text-[10px] text-slate-400 font-semibold font-mono-num mt-0.5">Staff ID: {selectedStaffForAtt?.publicId}</div>
+            </div>
+
+            <div>
+              <Label className="text-[10px] uppercase font-bold text-slate-400">Attendance Status Option *</Label>
+              <select value={manualAttStatus} onChange={(e) => setManualAttStatus(e.target.value)} className="w-full mt-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none">
+                <option value="PRESENT">Full Day Present</option>
+                <option value="HALF_DAY">Half Day Present</option>
+                <option value="ABSENT">Absent Today</option>
+                <option value="LEAVE">On Approved Leave</option>
+                <option value="HOLIDAY">Official Holiday</option>
+              </select>
+            </div>
+
+            <div>
+              <Label className="text-[10px] uppercase font-bold text-slate-400">Working Hours *</Label>
+              <Input type="number" min={0} max={24} value={manualAttHours} onChange={(e) => setManualAttHours(e.target.value)} className="mt-1" />
+            </div>
+
+            <DialogFooter className="gap-2 pt-2">
+              <Button variant="ghost" onClick={() => setAttendanceOpen(false)}>Cancel</Button>
+              <Button onClick={handleManualAttendance} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
+                Apply Override Status
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Staff Profile Detail Drawer Modal */}
+      <Dialog open={detailStaff !== null} onOpenChange={(o) => { if (!o) setDetailStaff(null); }}>
+        <DialogContent className="max-w-2xl text-xs max-h-[85vh] overflow-y-auto">
+          {detailStaff && (
+            <div className="space-y-5">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-500 overflow-hidden border border-slate-300">
+                    {detailStaff.member?.photoUrl ? <img src={detailStaff.member.photoUrl} alt="" className="h-full w-full object-cover" /> : initials(detailStaff.member?.fullName || "")}
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-slate-800">{detailStaff.member?.fullName}</h2>
+                    <p className="text-[10px] text-slate-400 font-semibold font-mono-num">Auto-Generated ID: {detailStaff.publicId} | Joining Date: {formatDate(detailStaff.joiningDate)}</p>
+                  </div>
+                </DialogTitle>
+              </DialogHeader>
+
+              <Tabs defaultValue="overview">
+                <TabsList className="bg-slate-100 p-0.5 rounded-lg w-full justify-start">
+                  <TabsTrigger value="overview" className="text-[10px] px-3 font-semibold rounded-md">👤 Overview</TabsTrigger>
+                  <TabsTrigger value="documents" className="text-[10px] px-3 font-semibold rounded-md">📄 Documents Ledger</TabsTrigger>
+                  <TabsTrigger value="leaves" className="text-[10px] px-3 font-semibold rounded-md">🏥 Leaves Log</TabsTrigger>
+                  <TabsTrigger value="emergency" className="text-[10px] px-3 font-semibold rounded-md">🚨 Emergency Contact</TabsTrigger>
+                </TabsList>
+
+                {/* SubTab 1: Overview */}
+                <TabsContent value="overview" className="space-y-4 pt-2">
+                  <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg">
+                    <div>
+                      <div className="text-[9px] uppercase font-bold text-slate-400">Staff Category</div>
+                      <div className="font-semibold text-slate-700 mt-0.5">{detailStaff.category}</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] uppercase font-bold text-slate-400">Reporting Manager</div>
+                      <div className="font-semibold text-slate-700 mt-0.5">{detailStaff.reportingTo || "Admin / SuperAdmin"}</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] uppercase font-bold text-slate-400">Gender & DOB</div>
+                      <div className="font-semibold text-slate-700 mt-0.5">{detailStaff.gender || "Male"} | {detailStaff.dob ? formatDate(detailStaff.dob) : "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] uppercase font-bold text-slate-400">Employment Status</div>
+                      <div className="font-semibold mt-0.5">
+                        <Badge variant={detailStaff.employmentStatus === "ACTIVE" ? "success" : "destructive"}>
+                          {detailStaff.employmentStatus}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h4 className="font-bold text-slate-800 text-[11px]">Primary Address:</h4>
+                    <p className="text-slate-600 bg-slate-50 p-2.5 rounded border">
+                      {detailStaff.addresses?.line || "Verified Address Block"}, {detailStaff.addresses?.area || "—"}, {detailStaff.addresses?.city || "—"}, {detailStaff.addresses?.state || "—"} - {detailStaff.addresses?.pincode || "—"}
+                    </p>
+                  </div>
+                </TabsContent>
+
+                {/* SubTab 2: Documents Ledger */}
+                <TabsContent value="documents" className="space-y-4 pt-2">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-bold text-slate-800 text-[11px]">Government Document Registrations</h4>
+                    <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setDocModalOpen(true)}>
+                      <Plus className="h-3.5 w-3.5 mr-1" /> Replace / Upload
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2 max-h-56 overflow-y-auto">
+                    {(detailStaff.documents || []).length === 0 ? (
+                      <div className="p-4 text-center text-slate-400">No identity documents registered for this profile.</div>
+                    ) : (
+                      (detailStaff.documents || []).map((doc, idx) => (
+                        <div key={idx} className="flex justify-between items-center p-3 rounded-lg border bg-slate-50/50">
+                          <div>
+                            <div className="font-bold text-slate-800">{doc.docType}</div>
+                            {doc.expiryDate && <div className="text-[9px] text-slate-400 mt-0.5">Expiry: {formatDate(doc.expiryDate)}</div>}
+                          </div>
+                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300">Active current doc</Badge>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </TabsContent>
+
+                {/* SubTab 3: Leaves Log */}
+                <TabsContent value="leaves" className="space-y-4 pt-2">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-bold text-slate-800 text-[11px]">Leave Audit History Log</h4>
+                    <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setLeaveModalOpen(true)}>
+                      <Plus className="h-3.5 w-3.5 mr-1" /> File Leave Request
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2 max-h-56 overflow-y-auto">
+                    {(detailStaff.leaves || []).length === 0 ? (
+                      <div className="p-4 text-center text-slate-400">No leave history logs found.</div>
+                    ) : (
+                      (detailStaff.leaves || []).map((l, idx) => (
+                        <div key={idx} className="flex justify-between items-center p-3 rounded-lg border bg-slate-50/50">
+                          <div>
+                            <div className="font-bold text-slate-850">{l.type}</div>
+                            <div className="text-[9px] text-slate-400 mt-0.5">Dates: {formatDate(l.startDate)} to {formatDate(l.endDate)}</div>
+                          </div>
+                          <Badge variant={l.status === "APPROVED" ? "success" : l.status === "PENDING" ? "warning" : "destructive"}>
+                            {l.status}
+                          </Badge>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </TabsContent>
+
+                {/* SubTab 4: Emergency Contacts */}
+                <TabsContent value="emergency" className="space-y-4 pt-2">
+                  <h4 className="font-bold text-slate-800 text-[11px]">Authorized Emergency Contact Data</h4>
+                  <div className="grid grid-cols-2 gap-4 bg-rose-50/40 p-4 rounded-xl border border-rose-100">
+                    <div>
+                      <div className="text-[9px] uppercase font-bold text-slate-400">Contact Name</div>
+                      <div className="font-bold text-slate-800 mt-0.5">{detailStaff.emergencyMedicalInfo?.emergencyName || "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] uppercase font-bold text-slate-400">Relation</div>
+                      <div className="font-bold text-slate-800 mt-0.5">{detailStaff.emergencyMedicalInfo?.emergencyRelation || "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] uppercase font-bold text-slate-400">Emergency Phone</div>
+                      <div className="font-bold text-slate-800 mt-0.5">{detailStaff.emergencyMedicalInfo?.emergencyMobile || "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] uppercase font-bold text-slate-400">Blood Group & Allergies</div>
+                      <div className="font-bold text-rose-700 mt-0.5">
+                        {detailStaff.emergencyMedicalInfo?.bloodGroup || "—"} | {detailStaff.emergencyMedicalInfo?.allergies || "None"}
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <DialogFooter className="pt-3 border-t">
+                <Button variant="ghost" onClick={() => setDetailStaff(null)}>Close Profile Screen</Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* QR Badge Dialog */}
+      <Dialog open={qrModalOpen} onOpenChange={setQrModalOpen}>
+        <DialogContent className="sm:max-w-xs text-xs text-center">
+          <DialogHeader>
+            <DialogTitle className="text-center font-bold text-slate-850">Unique Staff QR Badge</DialogTitle>
+          </DialogHeader>
+          <div className="py-5 space-y-4 flex flex-col items-center">
+            {qrTokenData ? (
+              <>
+                <div className="p-4 bg-white border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center">
+                  <img src={qrTokenData.qrDataUrl} alt="QR Code" className="h-44 w-44" />
+                </div>
+                <div>
+                  <div className="font-black text-sm text-slate-800">{qrTokenData.name}</div>
+                  <div className="text-[10px] text-indigo-700 font-bold font-mono uppercase tracking-wider mt-0.5">{qrTokenData.staffPublicId}</div>
+                  <div className="text-[10px] text-slate-400 font-semibold mt-1">{qrTokenData.organization?.name}</div>
+                </div>
+                <div className="w-full pt-2">
+                  <Button variant="outline" onClick={() => window.print()} className="w-full font-bold h-8 text-[11px]">
+                    <Printer className="h-3.5 w-3.5 mr-1.5" /> Print QR Badge card
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="p-10 text-center text-slate-400">Generating digital QR badge...</div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Replace Document Dialog */}
+      <Dialog open={docModalOpen} onOpenChange={setDocModalOpen}>
+        <DialogContent className="sm:max-w-md text-xs">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-teal-600" /> Upload / Replace Government Document
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <Label className="text-[10px] uppercase font-bold text-slate-400">Document Type *</Label>
+              <select value={newDocType} onChange={(e) => setNewDocType(e.target.value)} className="w-full mt-1 h-9 rounded border px-2 focus:outline-none">
+                <option value="Aadhaar Card">Aadhaar Card</option>
+                <option value="PAN Card">PAN Card</option>
+                <option value="Driving Licence">Driving Licence</option>
+                <option value="Police Verification">Police Verification</option>
+                <option value="Employment Agreement">Employment Agreement</option>
+                <option value="Medical Certificate">Medical Certificate</option>
+                <option value="Other Documents">Other Documents</option>
+              </select>
+            </div>
+
+            <div>
+              <Label className="text-[10px] uppercase font-bold text-slate-400">Document number / alphanumeric *</Label>
+              <Input value={newDocNumber} onChange={(e) => setNewDocNumber(e.target.value)} placeholder="e.g. 1234-5678-9012" className="mt-1" />
+            </div>
+
+            <div>
+              <Label className="text-[10px] uppercase font-bold text-slate-400">Expiry Date (Optional)</Label>
+              <Input type="date" value={newDocExpiry} onChange={(e) => setNewDocExpiry(e.target.value)} className="mt-1" />
+            </div>
+
+            <div>
+              <Label className="text-[10px] uppercase font-bold text-slate-400">Document file URL (Optional)</Label>
+              <Input value={newDocUrl} onChange={(e) => setNewDocUrl(e.target.value)} placeholder="e.g. /static/docs/doc1.png" className="mt-1" />
+            </div>
+
+            <DialogFooter className="gap-2 pt-2">
+              <Button variant="ghost" onClick={() => setDocModalOpen(false)}>Cancel</Button>
+              <Button onClick={handleUploadDocument} disabled={uploadingDoc} className="bg-teal-650 hover:bg-teal-700 text-white font-bold">
+                {uploadingDoc ? "Saving Doc & Archiving Old..." : "Save and Audit Doc"}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Apply Leave Modal */}
+      <Dialog open={leaveModalOpen} onOpenChange={setLeaveModalOpen}>
+        <DialogContent className="sm:max-w-md text-xs">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-teal-600" /> Apply / Request Leave
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <Label className="text-[10px] uppercase font-bold text-slate-400">Leave Type Category *</Label>
+              <select value={leaveType} onChange={(e) => setLeaveType(e.target.value)} className="w-full mt-1 h-9 rounded border px-2 focus:outline-none">
+                {LEAVE_TYPES.map(v => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-[10px] uppercase font-bold text-slate-400">Start Date *</Label>
+                <Input type="date" value={leaveStart} onChange={(e) => setLeaveStart(e.target.value)} className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase font-bold text-slate-400">End Date *</Label>
+                <Input type="date" value={leaveEnd} onChange={(e) => setLeaveEnd(e.target.value)} className="mt-1" />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-[10px] uppercase font-bold text-slate-400">Reason for Leave *</Label>
+              <Textarea value={leaveReason} onChange={(e) => setLeaveReason(e.target.value)} placeholder="Please explain the details here" className="mt-1" />
+            </div>
+
+            <DialogFooter className="gap-2 pt-2">
+              <Button variant="ghost" onClick={() => setLeaveModalOpen(false)}>Cancel</Button>
+              <Button onClick={handleApplyLeave} disabled={applyingLeave} className="bg-teal-650 hover:bg-teal-700 text-white font-bold">
+                {applyingLeave ? "Submitting Request..." : "File Leave Request"}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

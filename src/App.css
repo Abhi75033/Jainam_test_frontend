@@ -1,0 +1,4 @@
+/* App-specific overrides. Global theme lives in index.css. */
+.App {
+  min-height: 100vh;
+}
