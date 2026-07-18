@@ -65,6 +65,7 @@ export default function CountersPage() {
 
   useEffect(() => {
     loadLeaderboard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTab, reload]);
 
 

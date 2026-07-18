@@ -47,6 +47,7 @@ export default function ChaturmasPage() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId]);
 
   const openAdd = () => {

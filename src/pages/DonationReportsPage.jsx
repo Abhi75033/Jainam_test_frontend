@@ -35,6 +35,7 @@ export default function DonationReportsPage() {
 
   useEffect(() => {
     loadReport();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId]);
 
   const formatRupee = (value) => {

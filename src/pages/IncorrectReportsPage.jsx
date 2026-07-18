@@ -32,6 +32,7 @@ export default function IncorrectReportsPage() {
 
   useEffect(() => {
     loadReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId]);
 
   const verifyReport = async (id, status) => {

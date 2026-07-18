@@ -36,6 +36,7 @@ export default function MemberReportsPage() {
 
   useEffect(() => {
     loadReport();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId]);
 
   return (

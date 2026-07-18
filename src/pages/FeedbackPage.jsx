@@ -32,6 +32,7 @@ export default function FeedbackPage() {
 
   useEffect(() => {
     loadFeedback();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId]);
 
   const resolveFeedback = async (id, status) => {

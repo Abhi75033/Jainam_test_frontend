@@ -36,7 +36,10 @@ export default function FaqPage() {
     }
   };
 
-  useEffect(() => { loadFaqs(); }, [orgId]);
+  useEffect(() => {
+    loadFaqs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId]);
 
   const openAdd = () => {
     setEditing(null);

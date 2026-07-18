@@ -2026,7 +2026,10 @@ export default function OrgDetailPage({ basePath, entityLabel, apiPrefix }) {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadOrg(); }, [id, apiPrefix]);
+  useEffect(() => {
+    loadOrg();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, apiPrefix]);
 
   const follow = async () => {
     try { await api.post(`${apiPrefix}/${id}/follow`); toast.success(`Following this ${entityLabel.toLowerCase()}.`); }
