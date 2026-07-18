@@ -105,8 +105,8 @@ function IdCardVisual({ member, relation }) {
         {/* Org header info */}
         <div className="px-4 pt-3.5 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-orange-500 to-yellow-400 flex items-center justify-center shadow-lg">
-              <span className="text-white text-xs font-black">ॐ</span>
+            <div className="h-6 w-6 rounded-lg bg-white flex items-center justify-center shadow-lg overflow-hidden p-0.5">
+              <img src="/logo.png" alt="JiNANAM Logo" className="w-full h-full object-contain" />
             </div>
             <span className="text-[10px] font-black tracking-[0.2em] text-orange-400 uppercase">JiNANAM</span>
           </div>

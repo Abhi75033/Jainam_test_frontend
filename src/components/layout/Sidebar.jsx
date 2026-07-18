@@ -526,8 +526,8 @@ export default function Sidebar({ onNavigate }) {
     >
       {/* Brand */}
       <div className="h-20 px-5 flex items-center gap-3 border-b border-white/10 shrink-0">
-        <div className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-sm">
-          <span className="font-brand text-yellow-300 text-2xl leading-none">ॐ</span>
+        <div className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-sm overflow-hidden p-1">
+          <img src="/logo.png" alt="JiNANAM Logo" className="w-full h-full object-contain" />
         </div>
         <div className="leading-tight">
           <div className="font-brand text-xl text-white tracking-wide">JiNANAM</div>

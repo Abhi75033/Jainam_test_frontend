@@ -77,8 +77,8 @@ export default function LoginPage() {
       <div className="flex items-center justify-center p-6 md:p-12">
         <div className="w-full max-w-md">
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-11 h-11 rounded-md bg-primary/10 flex items-center justify-center">
-              <span className="font-brand text-primary text-2xl leading-none">ॐ</span>
+            <div className="w-11 h-11 rounded-md bg-primary/10 flex items-center justify-center overflow-hidden p-1">
+              <img src="/logo.png" alt="JiNANAM Logo" className="w-full h-full object-contain" />
             </div>
             <div>
               <div className="font-brand text-2xl leading-none">JiNANAM</div>

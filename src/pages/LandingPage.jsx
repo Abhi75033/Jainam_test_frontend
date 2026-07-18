@@ -18,8 +18,8 @@ export default function LandingPage() {
       <header className="sticky top-0 z-30 backdrop-blur-md bg-[#00004d]/95 text-white border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-md bg-[#FFC107] flex items-center justify-center shadow-md">
-              <span className="text-[#00004d] text-lg leading-none font-brand font-bold">ॐ</span>
+            <div className="w-9 h-9 rounded-md bg-[#FFC107] flex items-center justify-center shadow-md overflow-hidden p-1">
+              <img src="/logo.png" alt="JiNANAM Logo" className="w-full h-full object-contain" />
             </div>
             <div>
               <div className="font-brand text-xl leading-none tracking-tight">JiNANAM</div>
@@ -313,8 +313,8 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-12 grid md:grid-cols-4 gap-8">
           <div>
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-md bg-[#FFC107] flex items-center justify-center">
-                <span className="text-[#00004d] text-lg leading-none font-brand font-bold">ॐ</span>
+              <div className="w-9 h-9 rounded-md bg-[#FFC107] flex items-center justify-center overflow-hidden p-1">
+                <img src="/logo.png" alt="JiNANAM Logo" className="w-full h-full object-contain" />
               </div>
               <div className="font-brand text-xl text-white">JiNANAM</div>
             </div>
