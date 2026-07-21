@@ -82,9 +82,10 @@ function App() {
               </ProtectedRoute>
             }
           >
-            {/* ─── Dashboards ─────────────────────────────────────── */}
+            {/* ─── Dashboards & Shared ──────────────────────────────── */}
             <Route index element={<DashboardPage />} />
             <Route path="sa-dashboard" element={<SADashboardPage />} />
+            <Route path="coming-soon" element={<ComingSoonPage />} />
 
             {/* ─── People: Members ────────────────────────────────── */}
             <Route path="members" element={<MembersPage />} />
