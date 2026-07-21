@@ -50,7 +50,7 @@ export default function SubscriptionPlansPage() {
       price: String(row.price),
       currency: row.currency || "INR",
       duration: row.duration || "Monthly",
-      features: row.features || "",
+      features: Array.isArray(row.features) ? row.features.join(", ") : row.features || "",
     });
     setOpenDialog(true);
   };
@@ -62,12 +62,16 @@ export default function SubscriptionPlansPage() {
     }
     setSaving(true);
     try {
+      const featuresArray = typeof form.features === "string"
+        ? form.features.split(",").map(f => f.trim()).filter(Boolean)
+        : Array.isArray(form.features) ? form.features : [];
+
       const payload = {
         name: form.name,
         price: parseFloat(form.price),
         currency: form.currency || "INR",
         duration: form.duration,
-        features: form.features || "Basic features",
+        features: featuresArray.length > 0 ? featuresArray : ["Basic features"],
       };
       if (editing) {
         await api.patch(`/subscription-plans/${editing.id}`, payload);
@@ -128,7 +132,7 @@ export default function SubscriptionPlansPage() {
     },
     {
       key: "features", header: "Features Included",
-      render: (r) => <span className="text-slate-500 text-xs block max-w-sm">{r.features}</span>,
+      render: (r) => <span className="text-slate-500 text-xs block max-w-sm">{Array.isArray(r.features) ? r.features.join(", ") : r.features}</span>,
     },
     {
       key: "status", header: "Status",

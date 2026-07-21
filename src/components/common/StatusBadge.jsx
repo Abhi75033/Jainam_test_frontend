@@ -45,8 +45,13 @@ export function StatusBadge({ status, className }) {
   return (
     <Badge
       variant="outline"
+      title={
+        status === "PENDING_ACTIVATION"
+          ? "This member profile was created by an admin and is pending mobile activation by the user."
+          : undefined
+      }
       className={cn(
-        "font-medium text-[11px] tracking-wide border",
+        "font-medium text-[11px] tracking-wide border cursor-help",
         styles,
         className
       )}
