@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Search, UserPlus, Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle2, XCircle, Loader2, X, Trash2 } from "lucide-react";
-import { MemberLinkSelect } from "@/components/common/MemberLinkSelect";
+import MemberLinkSelect from "@/components/common/MemberLinkSelect";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from "@/components/ui/dialog";

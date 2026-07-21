@@ -17,7 +17,7 @@ import {
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { MemberLinkSelect } from "@/components/common/MemberLinkSelect";
+import MemberLinkSelect from "@/components/common/MemberLinkSelect";
 import {
   GENDER_OPTIONS, NATIONALITY_OPTIONS, LANGUAGE_OPTIONS, MARITAL_STATUS_OPTIONS,
   MOTHER_TONGUE_OPTIONS, TITHI_CALENDAR_OPTIONS, JAIN_SECT_OPTIONS,
@@ -282,6 +282,7 @@ function EditPanel({ member, onSave, onCancel }) {
     volunteerAreas: Array.isArray(member?.volunteerAreas) ? member.volunteerAreas : [],
     volunteerAvailability: member?.volunteerAvailability || "Weekend",
     familyMembers: Array.isArray(member?.familyMembers) ? member.familyMembers : [],
+    siblings: Array.isArray(member?.siblings) ? member.siblings : [],
     serviceNotifications: member?.serviceNotifications || ["SMS", "WhatsApp", "Push"],
     marketingNotifications: member?.marketingNotifications || ["WhatsApp", "Push"],
     showMobile: member?.showMobile ?? true,
@@ -338,10 +339,15 @@ function EditPanel({ member, onSave, onCancel }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.firstName || !form.mobile) {
-      toast.error("First Name and Mobile Number are mandatory fields.");
-      return;
-    }
+    if (!form.firstName) { toast.error("First Name is required."); return; }
+    if (!form.middleName) { toast.error("Middle Name is required."); return; }
+    if (!form.surname) { toast.error("Surname is required."); return; }
+    if (!form.mobile) { toast.error("Mobile Number is required."); return; }
+    if (!form.dob) { toast.error("Date of Birth is required."); return; }
+    if (!form.nationality) { toast.error("Nationality is required."); return; }
+    if (!form.pan) { toast.error("PAN Number is required."); return; }
+    if (!form.aadhaar) { toast.error("Aadhaar Number is required."); return; }
+    if (!form.maritalStatus) { toast.error("Marital Status is required."); return; }
     setSaving(true);
     try {
       const payload = {
