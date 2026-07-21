@@ -48,7 +48,7 @@ export default function BankingDetailsForm({ value = {}, onChange, className = "
   };
 
   return (
-    <div className={cn("space-y-4 overflow-y-auto", className)}>
+    <div className={cn("space-y-4 overflow-y-auto max-h-[60vh] pr-1.5 scrollbar-thin", className)}>
       {/* 1. Bank Account Name */}
       <div>
         <Label className="text-xs">Bank Account Name</Label>

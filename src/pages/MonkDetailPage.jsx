@@ -22,6 +22,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { toOptions } from "@/constants/dropdownOptions";
 import { useAuth } from "@/contexts/AuthContext";
 import TimePicker, { TimeRangePicker } from "@/components/common/TimePicker";
+import MemberLinkSelect from "@/components/common/MemberLinkSelect";
 
 // Constant arrays for community subsects and gacchas
 const DIGAMBAR_SUB = [
@@ -57,26 +58,14 @@ const MURTIPUJAK_GACCHAS = [
 
 // Reuse MemberSelect and MonkSelect helpers
 const MemberSelect = ({ label, value, onChange, placeholder = "Select Member..." }) => {
-  const [members, setMembers] = useState([]);
-  useEffect(() => {
-    api.get("/members", { params: { pageSize: 500 } })
-      .then((r) => setMembers(r.data?.data?.items || r.data?.data || []))
-      .catch(() => {});
-  }, []);
-
   return (
     <div>
-      <Label className="text-xs font-semibold text-slate-600">{label}</Label>
-      <SearchableSelect
-        value={value || ""}
-        onValueChange={onChange}
-        options={members.map(m => ({
-          value: m.id,
-          label: `${m.fullName} (${m.publicId || "No ID"})`
-        }))}
+      <Label className="text-xs font-semibold text-slate-600 mb-1 block">{label}</Label>
+      <MemberLinkSelect
+        value={value}
+        onChange={onChange}
         placeholder={placeholder}
-        searchPlaceholder="Search members…"
-        className="mt-1"
+        returnValueType="id"
       />
     </div>
   );

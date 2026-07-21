@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
  *   disabled      — boolean
  *   className     — string
  *   id            — string (for label association)
+ *   returnValueType — "publicId" | "id"
  */
 export default function MemberLinkSelect({
   value,
@@ -35,6 +36,7 @@ export default function MemberLinkSelect({
   disabled = false,
   className = "",
   id,
+  returnValueType = "publicId",
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -85,20 +87,21 @@ export default function MemberLinkSelect({
   };
 
   const selectMember = (member) => {
+    const valToReturn = returnValueType === "id" ? member.id : member.publicId;
     if (multi) {
-      const newIds = selectedIds.includes(member.publicId)
-        ? selectedIds.filter((id) => id !== member.publicId)
-        : [...selectedIds, member.publicId];
+      const newIds = selectedIds.includes(valToReturn)
+        ? selectedIds.filter((val) => val !== valToReturn)
+        : [...selectedIds, valToReturn];
       onChange?.(newIds);
       // Update local display objects
       setSelectedMembers((prev) => {
-        if (prev.find((m) => m.publicId === member.publicId)) {
-          return prev.filter((m) => m.publicId !== member.publicId);
+        if (prev.find((m) => m[returnValueType] === valToReturn)) {
+          return prev.filter((m) => m[returnValueType] !== valToReturn);
         }
         return [...prev, member];
       });
     } else {
-      onChange?.(member.publicId);
+      onChange?.(valToReturn);
       setSelectedMembers([member]);
       setOpen(false);
       setQuery("");
@@ -106,10 +109,10 @@ export default function MemberLinkSelect({
     }
   };
 
-  const removeMember = (publicId) => {
+  const removeMember = (valToRemove) => {
     if (multi) {
-      onChange?.(selectedIds.filter((id) => id !== publicId));
-      setSelectedMembers((prev) => prev.filter((m) => m.publicId !== publicId));
+      onChange?.(selectedIds.filter((id) => id !== valToRemove));
+      setSelectedMembers((prev) => prev.filter((m) => m[returnValueType] !== valToRemove));
     } else {
       onChange?.(null);
       setSelectedMembers([]);
@@ -130,7 +133,7 @@ export default function MemberLinkSelect({
     if (selectedIds.length === 0) { setSelectedMembers([]); return; }
     // Only fetch if we don't already have them
     const missing = selectedIds.filter(
-      (id) => !selectedMembers.find((m) => m.publicId === id)
+      (id) => !selectedMembers.find((m) => m[returnValueType] === id)
     );
     if (missing.length === 0) return;
     Promise.all(
@@ -163,7 +166,7 @@ export default function MemberLinkSelect({
               <span>{m.fullName || [m.firstName, m.surname].filter(Boolean).join(" ")}</span>
               <button
                 type="button"
-                onClick={() => removeMember(m.publicId)}
+                onClick={() => removeMember(returnValueType === "id" ? m.id : m.publicId)}
                 className="ml-0.5 hover:text-red-600"
               >
                 <X className="h-3 w-3" />
@@ -184,7 +187,7 @@ export default function MemberLinkSelect({
             )}
           </span>
           {!disabled && (
-            <button type="button" onClick={() => removeMember(selectedMembers[0]?.publicId)}>
+            <button type="button" onClick={() => removeMember(returnValueType === "id" ? selectedMembers[0]?.id : selectedMembers[0]?.publicId)}>
               <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
             </button>
           )}

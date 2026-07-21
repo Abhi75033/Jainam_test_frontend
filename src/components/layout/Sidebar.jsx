@@ -102,16 +102,22 @@ function NavLeaf({ item, collapsed, onNavigate, indent }) {
           active ? "bg-white/15 text-white" : "text-blue-100/70 hover:text-white hover:bg-white/8"
         )}
       >
-        <span
-          className="h-7 w-7 rounded-md flex items-center justify-center shrink-0"
-          style={
-            active
-              ? { backgroundColor: "rgba(255,255,255,0.2)", color: "#fff" }
-              : { backgroundColor: `${hex}22`, color: hex }
-          }
-        >
-          {Icon && <Icon className="h-4 w-4" />}
-        </span>
+        {Icon ? (
+          <span
+            className="h-7 w-7 rounded-md flex items-center justify-center shrink-0"
+            style={
+              active
+                ? { backgroundColor: "rgba(255,255,255,0.2)", color: "#fff" }
+                : { backgroundColor: `${hex}22`, color: hex }
+            }
+          >
+            <Icon className="h-4 w-4" />
+          </span>
+        ) : (
+          !collapsed && (
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-100/40 mr-1 ml-3 shrink-0" />
+          )
+        )}
 
         {!collapsed && (
           <span className="truncate text-xs font-semibold flex-1">{item.label}</span>
