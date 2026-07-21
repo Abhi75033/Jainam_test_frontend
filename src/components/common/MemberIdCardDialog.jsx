@@ -435,22 +435,22 @@ function EditPanel({ member, onSave, onCancel }) {
                   <Input value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} className="bg-white mt-1" />
                 </div>
                 <div>
-                  <Label className="text-xs font-semibold text-slate-600">Middle Name</Label>
+                  <Label className="text-xs font-semibold text-slate-600">Middle Name *</Label>
                   <Input value={form.middleName} onChange={(e) => setForm({ ...form, middleName: e.target.value })} className="bg-white mt-1" />
                 </div>
                 <div>
-                  <Label className="text-xs font-semibold text-slate-600">Surname</Label>
+                  <Label className="text-xs font-semibold text-slate-600">Surname *</Label>
                   <Input value={form.surname} onChange={(e) => setForm({ ...form, surname: e.target.value })} className="bg-white mt-1" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs font-semibold text-slate-600">Date of Birth</Label>
+                  <Label className="text-xs font-semibold text-slate-600">Date of Birth *</Label>
                   <Input type="date" value={form.dob} onChange={(e) => setForm({ ...form, dob: e.target.value })} className="bg-white mt-1" />
                 </div>
                 <div>
-                  <Label className="text-xs font-semibold text-slate-600">Gender</Label>
+                  <Label className="text-xs font-semibold text-slate-600">Gender *</Label>
                   <SearchableSelect
                     value={form.gender}
                     onValueChange={(v) => setForm({ ...form, gender: v })}
@@ -472,7 +472,7 @@ function EditPanel({ member, onSave, onCancel }) {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs font-semibold text-slate-600">Nationality</Label>
+                  <Label className="text-xs font-semibold text-slate-600">Nationality *</Label>
                   <SearchableSelect
                     value={form.nationality}
                     onValueChange={(v) => setForm({ ...form, nationality: v })}
@@ -495,17 +495,17 @@ function EditPanel({ member, onSave, onCancel }) {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs font-semibold text-slate-600">Identity Details: PAN Number (Optional)</Label>
+                  <Label className="text-xs font-semibold text-slate-600">Identity Details: PAN Number *</Label>
                   <Input value={form.pan} onChange={(e) => setForm({ ...form, pan: e.target.value })} placeholder="ABCDE1234F" className="bg-white mt-1 font-mono uppercase" />
                 </div>
                 <div>
-                  <Label className="text-xs font-semibold text-slate-600">Aadhaar Number (12 Digits)</Label>
+                  <Label className="text-xs font-semibold text-slate-600">Aadhaar Number * (12 Digits)</Label>
                   <Input value={form.aadhaar} onChange={(e) => setForm({ ...form, aadhaar: e.target.value })} placeholder="1234 5678 9012" className="bg-white mt-1 font-mono" maxLength={14} />
                 </div>
               </div>
 
               <div>
-                <Label className="text-xs font-semibold text-slate-600">Marital Status</Label>
+                <Label className="text-xs font-semibold text-slate-600">Marital Status *</Label>
                 <SearchableSelect
                   value={form.maritalStatus}
                   onValueChange={(v) => setForm({ ...form, maritalStatus: v })}
@@ -958,11 +958,11 @@ function EditPanel({ member, onSave, onCancel }) {
               <div className="space-y-2">
                 <div className="flex justify-between items-center border-b pb-1">
                   <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">👨‍👩‍👧‍👦 Family Members</h3>
-                  <Button variant="ghost" size="xs" type="button" className="text-orange-500 font-semibold text-[10px]" onClick={() => {
+                  <Button type="button" className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs h-10 px-4 rounded-lg shadow transition-all" onClick={() => {
                     const next = [...form.familyMembers, { id: Date.now(), fullName: "", relationship: "Son", mobile: "" }];
                     setForm({ ...form, familyMembers: next });
                   }}>
-                    + Add Member
+                    + Add Family Member
                   </Button>
                 </div>
                 {form.familyMembers.length === 0 && (
@@ -1005,6 +1005,91 @@ function EditPanel({ member, onSave, onCancel }) {
                         }} className="text-slate-400 hover:text-red-500 transition-colors">
                           <Trash2 className="h-4 w-4" />
                         </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Siblings builder section */}
+              <div className="space-y-2 border-t pt-3">
+                <div className="flex justify-between items-center border-b pb-1">
+                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">👫 Siblings</h3>
+                  <Button type="button" className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs h-10 px-4 rounded-lg shadow transition-all" onClick={() => {
+                    const next = [...(form.siblings || []), { id: Date.now(), linkProfile: false, siblingMemberId: "", fullName: "", relationship: "Brother" }];
+                    setForm({ ...form, siblings: next });
+                  }}>
+                    + Add Sibling
+                  </Button>
+                </div>
+                {(!form.siblings || form.siblings.length === 0) && (
+                  <div className="text-xs text-slate-400 italic">No siblings added. Click Add to build linkage.</div>
+                )}
+                <div className="space-y-2">
+                  {(form.siblings || []).map((sib, idx) => (
+                    <div key={sib.id || idx} className="space-y-2 bg-white p-3 rounded-lg border border-slate-100">
+                      <div className="flex items-center justify-between text-xs pb-1 border-b">
+                        <span className="font-semibold text-slate-600">Sibling #{idx + 1}</span>
+                        <div className="flex items-center gap-1.5">
+                          <input type="checkbox" id={`edit-sib-link-${idx}`} checked={sib.linkProfile} onChange={(e) => {
+                            const list = [...form.siblings];
+                            list[idx].linkProfile = e.target.checked;
+                            setForm({ ...form, siblings: list });
+                          }} className="h-3.5 w-3.5 text-orange-500 rounded border-slate-350" />
+                          <label htmlFor={`edit-sib-link-${idx}`} className="text-[10px] text-slate-500 font-semibold cursor-pointer">Link Platform Profile</label>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-12 gap-2 items-center">
+                        <div className="col-span-5">
+                          {sib.linkProfile ? (
+                            <div className="space-y-1">
+                              <span className="text-[10px] text-slate-400 font-bold block">SELECT PROFILE</span>
+                              <MemberLinkSelect
+                                value={sib.siblingMemberId}
+                                onValueChange={(val) => {
+                                  const list = [...form.siblings];
+                                  list[idx].siblingMemberId = val;
+                                  setForm({ ...form, siblings: list });
+                                }}
+                                placeholder="Search sibling by name or ID..."
+                              />
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              <span className="text-[10px] text-slate-400 font-bold block">SIBLING NAME</span>
+                              <Input value={sib.fullName} onChange={(e) => {
+                                const list = [...form.siblings];
+                                list[idx].fullName = e.target.value;
+                                setForm({ ...form, siblings: list });
+                              }} placeholder="Sibling Full Name" className="h-8 text-xs bg-white" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="col-span-4">
+                          <div className="space-y-1">
+                            <span className="text-[10px] text-slate-400 font-bold block">RELATIONSHIP</span>
+                            <SearchableSelect
+                              value={sib.relationship}
+                              onValueChange={(v) => {
+                                const list = [...form.siblings];
+                                list[idx].relationship = v;
+                                setForm({ ...form, siblings: list });
+                              }}
+                              options={toOptions(["Brother", "Sister"])}
+                              placeholder="Relationship"
+                              className="h-8 text-xs bg-white"
+                            />
+                          </div>
+                        </div>
+                        <div className="col-span-3 text-right pt-4">
+                          <button type="button" onClick={() => {
+                            const list = form.siblings.filter((_, i) => i !== idx);
+                            setForm({ ...form, siblings: list });
+                          }} className="text-slate-400 hover:text-red-500 transition-colors text-xs font-semibold">
+                            <Trash2 className="h-4 w-4 inline mr-1" /> Remove
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
