@@ -203,6 +203,21 @@ export default function DashboardPage() {
   const [showReminderDialog, setShowReminderDialog] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
+  // Super Admin Platform Dashboard states
+  const [activeDashboardTab, setActiveDashboardTab] = useState("ADMIN");
+  const [platformData, setPlatformData] = useState(null);
+  const [loadingPlatform, setLoadingPlatform] = useState(false);
+
+  useEffect(() => {
+    if (isSuperAdmin && activeDashboardTab === "SA_DASHBOARD") {
+      setLoadingPlatform(true);
+      api.get("/dashboard/platform")
+        .then((res) => setPlatformData(res.data?.data || null))
+        .catch(() => {})
+        .finally(() => setLoadingPlatform(false));
+    }
+  }, [isSuperAdmin, activeDashboardTab, reloadKey]);
+
   // Dynamic Data Lists
   const [monksList, setMonksList] = useState([]);
   const [toursList, setToursList] = useState([]);
@@ -433,410 +448,522 @@ export default function DashboardPage() {
 
   return (
     <div data-testid="dashboard-page">
-      {/* Temple header banner */}
-      <div className="mb-4 md:mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div className="flex items-center gap-3 md:gap-4 min-w-0">
-          <div className="h-12 w-12 md:h-14 md:w-14 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-md shrink-0">
-            <Landmark className="h-6 w-6 md:h-7 md:w-7 text-white" strokeWidth={2.2} />
-          </div>
-          <div className="min-w-0">
-            <h1 className="font-heading text-xl sm:text-2xl md:text-3xl font-bold text-foreground tracking-tight truncate">
-              {orgName}
-            </h1>
-            <div className="text-xs text-primary mt-1 flex items-center gap-1.5">
-              <Sparkles className="h-3 w-3" /> Jai Jinendra
-              {liveConnected ? (
-                <LiveBadge label="Live Live" />
-              ) : (
-                <span className="text-[10px] bg-slate-100 text-slate-500 font-semibold px-2 py-0.5 rounded-full border">Reconnecting</span>
-              )}
+      {isSuperAdmin && (
+        <div className="flex border-b border-slate-200 mb-6 gap-2 bg-slate-50 p-1.5 rounded-lg border">
+          <button
+            onClick={() => setActiveDashboardTab("ADMIN")}
+            className={`py-2 px-4 text-xs font-bold rounded-md transition-all ${
+              activeDashboardTab === "ADMIN"
+                ? "bg-white text-orange-500 shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            A Dashboard
+          </button>
+          <button
+            onClick={() => setActiveDashboardTab("SA_DASHBOARD")}
+            className={`py-2 px-4 text-xs font-bold rounded-md transition-all ${
+              activeDashboardTab === "SA_DASHBOARD"
+                ? "bg-white text-orange-500 shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            SA Dashboard
+          </button>
+        </div>
+      )}
+
+      {isSuperAdmin && activeDashboardTab === "SA_DASHBOARD" ? (
+        <div className="space-y-6" data-testid="sa-dashboard-view">
+          {/* SA Dashboard Title */}
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md shrink-0">
+              <BarChart3 className="h-6 w-6 text-white" strokeWidth={2.2} />
             </div>
+            <div>
+              <h1 className="font-heading text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">
+                SA Dashboard
+              </h1>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Global platform metrics, user analytics, and centralized configuration scope.
+              </p>
+            </div>
+          </div>
+
+          {/* SA Stat Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <StatCard label="Total Members" value={(platformData?.totalMembers ?? 0).toLocaleString()} delta="Active on platform" icon={Users} tone="green" />
+            <StatCard label="Registered Orgs" value={(platformData?.totalOrgs ?? 0).toLocaleString()} delta="Temples & centers" icon={Landmark} tone="blue" />
+            <StatCard label="Total Donations" value={formatCurrency(platformData?.totalDonations ?? 0)} delta="Platform-wide ledger" icon={HeartHandshake} tone="green" />
+            <StatCard label="Active Volunteers" value={(platformData?.activeVolunteers ?? 0).toLocaleString()} delta="Assigned today" icon={HandHeart} tone="orange" />
+            <StatCard label="Ticket Sales" value={(platformData?.pendingTickets ?? 0).toLocaleString()} delta="Event tickets sold" icon={ClipboardList} tone="purple" />
+          </div>
+
+          {/* SA Charts & Lists Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <SectionCard number="1" title="Newest Organizations">
+              <div className="space-y-3">
+                {(!platformData?.recentOrgs || platformData.recentOrgs.length === 0) ? (
+                  <div className="text-center py-12 text-xs text-muted-foreground font-medium">No recent organizations registered.</div>
+                ) : (
+                  platformData.recentOrgs.map((o) => (
+                    <div key={o.id} className="flex items-center justify-between p-2 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                      <div>
+                        <div className="text-xs font-bold text-slate-800">{o.name}</div>
+                        <div className="text-[10px] text-slate-500 mt-0.5 capitalize">{o.type.replace('_', ' ')} · {o.city || 'India'}</div>
+                      </div>
+                      <span className="text-[9px] text-muted-foreground shrink-0">{new Date(o.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </SectionCard>
+
+            <SectionCard number="2" title="Newest Members">
+              <div className="space-y-3">
+                {(!platformData?.recentMembers || platformData.recentMembers.length === 0) ? (
+                  <div className="text-center py-12 text-xs text-muted-foreground font-medium">No recent member signups.</div>
+                ) : (
+                  platformData.recentMembers.map((m) => (
+                    <div key={m.publicId} className="flex items-center justify-between p-2 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                      <div>
+                        <div className="text-xs font-bold text-slate-800">{m.fullName}</div>
+                        <div className="text-[10px] font-mono text-orange-600 mt-0.5">{m.publicId}</div>
+                      </div>
+                      <Badge variant="outline" className="text-[9px] shrink-0">{m.category}</Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            </SectionCard>
+
+            <SectionCard number="3" title="App Engagement Stats">
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="p-3 border rounded-lg bg-slate-50/40 text-center">
+                  <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Active Users (DAU)</div>
+                  <div className="text-2xl font-black mt-1 font-mono-num text-slate-800">{platformData?.appUsage?.dau ?? 12}</div>
+                </div>
+                <div className="p-3 border rounded-lg bg-slate-50/40 text-center">
+                  <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">API Latency</div>
+                  <div className="text-2xl font-black mt-1 font-mono-num text-slate-800">{platformData?.appUsage?.apiLatencyMs ?? 42}ms</div>
+                </div>
+              </div>
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-2">Platform Actions</div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button size="xs" variant="outline" className="text-[10px] h-8 justify-start" onClick={() => navigate("/master-data")}>⚙ Master Data Config</Button>
+                <Button size="xs" variant="outline" className="text-[10px] h-8 justify-start" onClick={() => navigate("/staff")}>👥 Platform Staff</Button>
+              </div>
+            </SectionCard>
           </div>
         </div>
-
-        {isSuperAdmin && (
-          <div className="flex gap-2 w-full md:w-auto shrink-0 flex-wrap">
-            <Select value={selectedType} onValueChange={setSelectedType}>
-              <SelectTrigger className="w-36 h-10 text-xs font-semibold bg-white border border-border">
-                <SelectValue placeholder="Select Type" />
-              </SelectTrigger>
-              <SelectContent>
-                {ORG_TYPES.map((t) => (
-                  <SelectItem key={t.key} value={t.key} className="text-xs font-medium">
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={selectedType === "ADMIN" ? selectedAdminId : orgId}
-              onValueChange={(val) => {
-                if (selectedType === "ADMIN") {
-                  setSelectedAdminId(val);
-                  const selectedAdmin = orgs.find((o) => o.id === val);
-                  if (selectedAdmin) {
-                    const targetOrgId = selectedAdmin.organizationIds[0];
-                    if (targetOrgId) {
-                      setOrgId(targetOrgId);
-                      setOrgName(`${selectedAdmin.name} · ${selectedAdmin.organizationName}`);
-                    } else {
-                      setOrgId("");
-                      setOrgName(`${selectedAdmin.name} (${selectedAdmin.role || "No Org Scope"})`);
-                    }
-                  }
-                } else {
-                  setOrgId(val);
-                  const found = orgs.find((o) => o.id === val);
-                  if (found) setOrgName(found.name);
-                }
-              }}
-              disabled={orgs.length === 0}
-            >
-              <SelectTrigger className="w-52 h-10 text-xs font-semibold bg-white border border-border">
-                <SelectValue placeholder={orgName || "Select Option"} />
-              </SelectTrigger>
-              <SelectContent>
-                {orgs.map((o) => (
-                  <SelectItem key={o.id} value={o.id} className="text-xs font-medium">
-                    {o.name} {selectedType === "ADMIN" && o.role ? `(${o.role})` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-      </div>
-
-      {/* Metric stats row */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4 md:mb-6">
-        <StatCard label="Today's Visitors" value={(stats.todaysVisitors ?? 0).toLocaleString()} delta="Devotees checked-in" icon={Users} tone="green" testId="stat-visitors" />
-        <StatCard label="Bhojanshala Meals" value={(stats.bhojanshalaMeals ?? 0).toLocaleString()} delta="Meals served today" icon={UtensilsCrossed} tone="orange" testId="stat-meals" />
-        <StatCard label="Active Volunteers" value={(stats.activeVolunteers ?? 0).toLocaleString()} delta="On-duty volunteers" icon={HandHeart} tone="blue" testId="stat-volunteers" />
-        <StatCard label="Room Occupancy" value={`${stats.occupiedRooms ?? 0}`} delta="Occupied / 200 Rooms" icon={BedDouble} tone="purple" testId="stat-rooms" />
-        <StatCard label="Donations Today" value={formatCurrency(stats.totalDonations ?? 0)} delta={`${stats.donationCount ?? 0} transaction logs`} icon={HeartHandshake} tone="green" testId="stat-donations" />
-      </div>
-
-      {/* Row 1: Monk arrivals · Room status · 99 Yatra */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-        <SectionCard number="1" title="Monk Arrival & Tracking" viewAll viewAllTo="/tracking" testId="section-monks">
-          <div className="space-y-3">
-            {activeMonks.length === 0 ? (
-              <div className="text-center py-12 text-xs text-muted-foreground font-medium">
-                No active monk tracking data available.
+      ) : (
+        <>
+          {/* Temple header banner */}
+          <div className="mb-4 md:mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="flex items-center gap-3 md:gap-4 min-w-0">
+              <div className="h-12 w-12 md:h-14 md:w-14 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-md shrink-0">
+                <Landmark className="h-6 w-6 md:h-7 md:w-7 text-white" strokeWidth={2.2} />
               </div>
-            ) : (
-              activeMonks.map((m) => (
-                <div key={m.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/40 transition-colors">
-                  <Avatar className="h-10 w-10 shrink-0">
-                    <AvatarFallback className="bg-orange-100 text-orange-700 text-xs font-semibold">
-                      {initials(m.name.replace("Pujya ", ""))}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-foreground truncate">{m.name}</div>
-                    <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                      <MapPin className="h-3 w-3 shrink-0" />
-                      <span className="truncate">{m.currently}</span>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <div className="text-[10px] text-muted-foreground">{m.eta}</div>
-                    <span className={`inline-block text-[9px] font-semibold px-2 py-0.5 rounded-full mt-1 ${STATUS_BADGES[m.status] || "bg-slate-100"}`}>
-                      {m.status}
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </SectionCard>
-
-        <SectionCard number="2" title="Room Status & Inventory" viewAll viewAllTo="/bookings" testId="section-rooms">
-          {(() => {
-            const roomStats = stats.roomStats || { available: 0, occupied: 0, cleaning: 0, total: 0, floors: [] };
-            return (
-              <>
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="rounded-lg border border-border p-3 text-center">
-                    <BedDouble className="h-5 w-5 mx-auto text-primary mb-1" />
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Available</div>
-                    <div className="font-heading font-bold text-xl text-foreground mt-0.5">{roomStats.available}</div>
-                    <div className="text-[10px] text-muted-foreground">{roomStats.total > 0 ? Math.round((roomStats.available / roomStats.total) * 100) : 0}%</div>
-                  </div>
-                  <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-3 text-center">
-                    <Users className="h-5 w-5 mx-auto text-blue-600 mb-1" />
-                    <div className="text-[10px] uppercase tracking-wider text-blue-700 font-semibold">Occupied</div>
-                    <div className="font-heading font-bold text-xl text-blue-800 mt-1">{roomStats.occupied}</div>
-                    <div className="text-[10px] text-blue-600">{roomStats.total > 0 ? Math.round((roomStats.occupied / roomStats.total) * 100) : 0}%</div>
-                  </div>
-                  <div className="rounded-lg border border-orange-100 bg-orange-50 p-3 text-center">
-                    <Sparkles className="h-5 w-5 mx-auto text-orange-600 mb-1" />
-                    <div className="text-[10px] uppercase tracking-wider text-orange-700 font-semibold">Cleaning</div>
-                    <div className="font-heading font-bold text-xl text-orange-800 mt-1">{roomStats.cleaning}</div>
-                    <div className="text-[10px] text-orange-600">{roomStats.total > 0 ? Math.round((roomStats.cleaning / roomStats.total) * 100) : 0}%</div>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  {roomStats.floors.length === 0 ? (
-                    <div className="text-center py-6 text-xs text-muted-foreground">
-                      No rooms registered for this organization.
-                    </div>
+              <div className="min-w-0">
+                <h1 className="font-heading text-xl sm:text-2xl md:text-3xl font-bold text-foreground tracking-tight truncate">
+                  {orgName}
+                </h1>
+                <div className="text-xs text-primary mt-1 flex items-center gap-1.5">
+                  <Sparkles className="h-3 w-3" /> Jai Jinendra
+                  {liveConnected ? (
+                    <LiveBadge label="Live Live" />
                   ) : (
-                    roomStats.floors.map((f) => (
-                      <div key={f.name} className="grid grid-cols-6 items-center text-xs gap-2">
-                        <div className="col-span-2 text-foreground">{f.name}</div>
-                        <div className="col-span-2">
-                          <Progress value={f.total > 0 ? (f.occupied / f.total) * 100 : 0} className="h-1.5" />
-                        </div>
-                        <div className="col-span-1 text-right font-mono-num text-muted-foreground">{f.occupied} / {f.total}</div>
-                        <div className="col-span-1 text-right text-orange-600 font-medium">{f.cleaning}</div>
-                      </div>
-                    ))
+                    <span className="text-[10px] bg-slate-100 text-slate-500 font-semibold px-2 py-0.5 rounded-full border">Reconnecting</span>
                   )}
                 </div>
-              </>
-            );
-          })()}
-        </SectionCard>
-
-        <SectionCard number="3" title="99 Yatra Group Management" viewAll viewAllTo="/tours" testId="section-yatra">
-          {activeYatras.length === 0 ? (
-            <div className="text-center py-12 text-xs text-muted-foreground font-medium">
-              No active Yatra groups registered.
+              </div>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[380px]">
-                <thead>
-                  <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border">
-                    <th className="text-left font-semibold py-2">Sangh / Group</th>
-                    <th className="text-center font-semibold">People</th>
-                    <th className="text-center font-semibold">Done</th>
-                    <th className="text-right font-semibold">Progress</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeYatras.map((y, i) => (
-                    <tr key={i} className="border-b border-border/60 last:border-0">
-                      <td className="py-2.5 pr-2 truncate max-w-[140px] font-semibold text-slate-800">{y.name}</td>
-                      <td className="text-center font-mono-num text-xs">{y.participants}</td>
-                      <td className="text-center text-xs">{y.completed}</td>
-                      <td className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <span className="font-mono-num text-xs font-semibold text-slate-700">{y.progress}%</span>
-                          <div className="w-12 hidden sm:block">
-                            <Progress value={y.progress} className="h-1.5" />
+
+            {isSuperAdmin && (
+              <div className="flex gap-2 w-full md:w-auto shrink-0 flex-wrap">
+                <Select value={selectedType} onValueChange={setSelectedType}>
+                  <SelectTrigger className="w-36 h-10 text-xs font-semibold bg-white border border-border">
+                    <SelectValue placeholder="Select Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ORG_TYPES.map((t) => (
+                      <SelectItem key={t.key} value={t.key} className="text-xs font-medium">
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={selectedType === "ADMIN" ? selectedAdminId : orgId}
+                  onValueChange={(val) => {
+                    if (selectedType === "ADMIN") {
+                      setSelectedAdminId(val);
+                      const selectedAdmin = orgs.find((o) => o.id === val);
+                      if (selectedAdmin) {
+                        const targetOrgId = selectedAdmin.organizationIds[0];
+                        if (targetOrgId) {
+                          setOrgId(targetOrgId);
+                          setOrgName(`${selectedAdmin.name} · ${selectedAdmin.organizationName}`);
+                        } else {
+                          setOrgId("");
+                          setOrgName(`${selectedAdmin.name} (${selectedAdmin.role || "No Org Scope"})`);
+                        }
+                      }
+                    } else {
+                      setOrgId(val);
+                      const found = orgs.find((o) => o.id === val);
+                      if (found) setOrgName(found.name);
+                    }
+                  }}
+                  disabled={orgs.length === 0}
+                >
+                  <SelectTrigger className="w-52 h-10 text-xs font-semibold bg-white border border-border">
+                    <SelectValue placeholder={orgName || "Select Option"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {orgs.map((o) => (
+                      <SelectItem key={o.id} value={o.id} className="text-xs font-medium">
+                        {o.name} {selectedType === "ADMIN" && o.role ? `(${o.role})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          {/* Metric stats row */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4 md:mb-6">
+            <StatCard label="Today's Visitors" value={(stats.todaysVisitors ?? 0).toLocaleString()} delta="Devotees checked-in" icon={Users} tone="green" testId="stat-visitors" />
+            <StatCard label="Bhojanshala Meals" value={(stats.bhojanshalaMeals ?? 0).toLocaleString()} delta="Meals served today" icon={UtensilsCrossed} tone="orange" testId="stat-meals" />
+            <StatCard label="Active Volunteers" value={(stats.activeVolunteers ?? 0).toLocaleString()} delta="On-duty volunteers" icon={HandHeart} tone="blue" testId="stat-volunteers" />
+            <StatCard label="Room Occupancy" value={`${stats.occupiedRooms ?? 0}`} delta="Occupied / 200 Rooms" icon={BedDouble} tone="purple" testId="stat-rooms" />
+            <StatCard label="Donations Today" value={formatCurrency(stats.totalDonations ?? 0)} delta={`${stats.donationCount ?? 0} transaction logs`} icon={HeartHandshake} tone="green" testId="stat-donations" />
+          </div>
+
+          {/* Row 1: Monk arrivals · Room status · 99 Yatra */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+            <SectionCard number="1" title="Monk Arrival & Tracking" viewAll viewAllTo="/tracking" testId="section-monks">
+              <div className="space-y-3">
+                {activeMonks.length === 0 ? (
+                  <div className="text-center py-12 text-xs text-muted-foreground font-medium">
+                    No active monk tracking data available.
+                  </div>
+                ) : (
+                  activeMonks.map((m) => (
+                    <div key={m.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/40 transition-colors">
+                      <Avatar className="h-10 w-10 shrink-0">
+                        <AvatarFallback className="bg-orange-100 text-orange-700 text-xs font-semibold">
+                          {initials(m.name.replace("Pujya ", ""))}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-foreground truncate">{m.name}</div>
+                        <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{m.currently}</span>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-[10px] text-muted-foreground">{m.eta}</div>
+                        <span className={`inline-block text-[9px] font-semibold px-2 py-0.5 rounded-full mt-1 ${STATUS_BADGES[m.status] || "bg-slate-100"}`}>
+                          {m.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </SectionCard>
+
+            <SectionCard number="2" title="Room Status & Inventory" viewAll viewAllTo="/bookings" testId="section-rooms">
+              {(() => {
+                const roomStats = stats.roomStats || { available: 0, occupied: 0, cleaning: 0, total: 0, floors: [] };
+                return (
+                  <>
+                    <div className="grid grid-cols-3 gap-3 mb-4">
+                      <div className="rounded-lg border border-border p-3 text-center">
+                        <BedDouble className="h-5 w-5 mx-auto text-primary mb-1" />
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Available</div>
+                        <div className="font-heading font-bold text-xl text-foreground mt-0.5">{roomStats.available}</div>
+                        <div className="text-[10px] text-muted-foreground">{roomStats.total > 0 ? Math.round((roomStats.available / roomStats.total) * 100) : 0}%</div>
+                      </div>
+                      <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-3 text-center">
+                        <Users className="h-5 w-5 mx-auto text-blue-600 mb-1" />
+                        <div className="text-[10px] uppercase tracking-wider text-blue-700 font-semibold">Occupied</div>
+                        <div className="font-heading font-bold text-xl text-blue-800 mt-1">{roomStats.occupied}</div>
+                        <div className="text-[10px] text-blue-600">{roomStats.total > 0 ? Math.round((roomStats.occupied / roomStats.total) * 100) : 0}%</div>
+                      </div>
+                      <div className="rounded-lg border border-orange-100 bg-orange-50 p-3 text-center">
+                        <Sparkles className="h-5 w-5 mx-auto text-orange-600 mb-1" />
+                        <div className="text-[10px] uppercase tracking-wider text-orange-700 font-semibold">Cleaning</div>
+                        <div className="font-heading font-bold text-xl text-orange-800 mt-1">{roomStats.cleaning}</div>
+                        <div className="text-[10px] text-orange-600">{roomStats.total > 0 ? Math.round((roomStats.cleaning / roomStats.total) * 100) : 0}%</div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {roomStats.floors.length === 0 ? (
+                        <div className="text-center py-6 text-xs text-muted-foreground">
+                          No rooms registered for this organization.
+                        </div>
+                      ) : (
+                        roomStats.floors.map((f) => (
+                          <div key={f.name} className="grid grid-cols-6 items-center text-xs gap-2">
+                            <div className="col-span-2 text-foreground">{f.name}</div>
+                            <div className="col-span-2">
+                              <Progress value={f.total > 0 ? (f.occupied / f.total) * 100 : 0} className="h-1.5" />
+                            </div>
+                            <div className="col-span-1 text-right font-mono-num text-muted-foreground">{f.occupied} / {f.total}</div>
+                            <div className="col-span-1 text-right text-orange-600 font-medium">{f.cleaning}</div>
                           </div>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </SectionCard>
-      </div>
+                        ))
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
+            </SectionCard>
 
-      {/* Row 2: Bhojanshala · Events · Volunteers */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-        <SectionCard number="4" title="Bhojanshala Management" testId="section-bhojanshala">
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: "Breakfast Count", value: Math.round((stats.todaysVisitors ?? 0) * 0.3), time: "07:00 AM - 08:30 AM", icon: Coffee, tone: "green" },
-              { label: "Lunch Count", value: Math.round((stats.todaysVisitors ?? 0) * 0.8), time: "11:30 AM - 01:30 PM", icon: UtensilsCrossed, tone: "orange" },
-              { label: "Dinner Count", value: Math.round((stats.todaysVisitors ?? 0) * 0.4), time: "07:00 PM - 08:30 PM", icon: Moon, tone: "purple" },
-              { label: "Passes Issued", value: stats.todaysVisitors ?? 0, time: "Today", icon: ClipboardList, tone: "blue" },
-            ].map((c) => (
-              <div key={c.label} className="rounded-lg border border-border p-3">
-                <div className={`icon-chip ${c.tone} h-9 w-9 mb-2`}>
-                  <c.icon className="h-4 w-4" />
+            <SectionCard number="3" title="99 Yatra Group Management" viewAll viewAllTo="/tours" testId="section-yatra">
+              {activeYatras.length === 0 ? (
+                <div className="text-center py-12 text-xs text-muted-foreground font-medium">
+                  No active Yatra groups registered.
                 </div>
-                <div className="text-[11px] text-muted-foreground">{c.label}</div>
-                <div className="font-heading font-bold text-2xl mt-0.5 font-mono-num">{c.value}</div>
-                <div className="text-[10px] text-muted-foreground mt-1">{c.time}</div>
-              </div>
-            ))}
-          </div>
-        </SectionCard>
-
-        <SectionCard number="5" title="Event Management" viewAll viewAllTo="/events" testId="section-events">
-          <div className="space-y-3">
-            {activeEvents.length === 0 ? (
-              <div className="text-center py-8 text-xs text-muted-foreground">
-                No upcoming events scheduled.
-              </div>
-            ) : (
-              activeEvents.map((e, i) => (
-                <div key={i} className="flex items-center gap-3 p-2 rounded-lg border border-border">
-                  <div className={`icon-chip ${e.tone} h-12 w-12 flex-col text-center`}>
-                    <div className="text-lg font-bold font-heading leading-none">{e.day}</div>
-                    <div className="text-[9px] uppercase font-semibold mt-0.5">{e.month}</div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{e.title}</div>
-                    <div className="text-[11px] text-muted-foreground">{e.time}</div>
-                  </div>
-                  <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-orange-100 text-orange-700 shrink-0">
-                    Upcoming
-                  </span>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm min-w-[380px]">
+                    <thead>
+                      <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border">
+                        <th className="text-left font-semibold py-2">Sangh / Group</th>
+                        <th className="text-center font-semibold">People</th>
+                        <th className="text-center font-semibold">Done</th>
+                        <th className="text-right font-semibold">Progress</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activeYatras.map((y, i) => (
+                        <tr key={i} className="border-b border-border/60 last:border-0">
+                          <td className="py-2.5 pr-2 truncate max-w-[140px] font-semibold text-slate-800">{y.name}</td>
+                          <td className="text-center font-mono-num text-xs">{y.participants}</td>
+                          <td className="text-center text-xs">{y.completed}</td>
+                          <td className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <span className="font-mono-num text-xs font-semibold text-slate-700">{y.progress}%</span>
+                              <div className="w-12 hidden sm:block">
+                                <Progress value={y.progress} className="h-1.5" />
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              ))
-            )}
+              )}
+            </SectionCard>
           </div>
-          <div className="flex gap-2 mt-4">
-            <Button size="sm" className="flex-1 bg-emerald-600 hover:bg-emerald-700" onClick={() => navigate("/events")} data-testid="events-create-btn">
-              <PlusCircle className="h-4 w-4 mr-1.5" /> Create Event
-            </Button>
-            <Button size="sm" variant="outline" className="flex-1" onClick={() => setShowReminderDialog(true)} data-testid="send-reminder-btn">
-              <Send className="h-4 w-4 mr-1.5" /> Send Reminder
-            </Button>
-          </div>
-        </SectionCard>
 
-        <SectionCard number="6" title="Volunteer Assignment" viewAll viewAllTo="/volunteers" testId="section-volunteers">
-          {activeVolunteers.length === 0 ? (
-            <div className="text-center py-12 text-xs text-muted-foreground font-sans">
-              No volunteers assigned today.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[320px]">
-                <thead>
-                  <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border">
-                    <th className="text-left font-semibold py-2">Volunteer</th>
-                    <th className="text-left font-semibold">Duty</th>
-                    <th className="text-right font-semibold">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeVolunteers.map((v, i) => (
-                    <tr key={i} className="border-b border-border/60 last:border-0">
-                      <td className="py-2 pr-2">
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-7 w-7">
-                            <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-semibold">
-                              {initials(v.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-xs font-medium truncate">{v.name}</span>
-                        </div>
-                      </td>
-                      <td className="text-xs text-muted-foreground truncate max-w-[100px]">{v.duty}</td>
-                      <td className="text-right font-mono-num text-[10px] text-muted-foreground">{v.time}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </SectionCard>
-      </div>
+          {/* Row 2: Bhojanshala · Events · Volunteers */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+            <SectionCard number="4" title="Bhojanshala Management" testId="section-bhojanshala">
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: "Breakfast Count", value: Math.round((stats.todaysVisitors ?? 0) * 0.3), time: "07:00 AM - 08:30 AM", icon: Coffee, tone: "green" },
+                  { label: "Lunch Count", value: Math.round((stats.todaysVisitors ?? 0) * 0.8), time: "11:30 AM - 01:30 PM", icon: UtensilsCrossed, tone: "orange" },
+                  { label: "Dinner Count", value: Math.round((stats.todaysVisitors ?? 0) * 0.4), time: "07:00 PM - 08:30 PM", icon: Moon, tone: "purple" },
+                  { label: "Passes Issued", value: stats.todaysVisitors ?? 0, time: "Today", icon: ClipboardList, tone: "blue" },
+                ].map((c) => (
+                  <div key={c.label} className="rounded-lg border border-border p-3">
+                    <div className={`icon-chip ${c.tone} h-9 w-9 mb-2`}>
+                      <c.icon className="h-4 w-4" />
+                    </div>
+                    <div className="text-[11px] text-muted-foreground">{c.label}</div>
+                    <div className="font-heading font-bold text-2xl mt-0.5 font-mono-num">{c.value}</div>
+                    <div className="text-[10px] text-muted-foreground mt-1">{c.time}</div>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
 
-      {/* Row 3: Live Donations · Announcements · Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <SectionCard number="7" title="Live Donations Ledger" viewAll viewAllTo="/donations" testId="section-donations">
-          <div className="flex justify-between items-center mb-3">
-            <div>
-              <div className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">Today's Total</div>
-              <div className="font-heading font-bold text-3xl text-foreground font-mono-num">{formatCurrency(stats.totalDonations ?? 0)}</div>
-              <div className="text-xs text-muted-foreground font-semibold flex items-center gap-1">
-                {stats.donationCount ?? 0} donation transactions
+            <SectionCard number="5" title="Event Management" viewAll viewAllTo="/events" testId="section-events">
+              <div className="space-y-3">
+                {activeEvents.length === 0 ? (
+                  <div className="text-center py-8 text-xs text-muted-foreground">
+                    No upcoming events scheduled.
+                  </div>
+                ) : (
+                  activeEvents.map((e, i) => (
+                    <div key={i} className="flex items-center gap-3 p-2 rounded-lg border border-border">
+                      <div className={`icon-chip ${e.tone} h-12 w-12 flex-col text-center`}>
+                        <div className="text-lg font-bold font-heading leading-none">{e.day}</div>
+                        <div className="text-[9px] uppercase font-semibold mt-0.5">{e.month}</div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{e.title}</div>
+                        <div className="text-[11px] text-muted-foreground">{e.time}</div>
+                      </div>
+                      <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-orange-100 text-orange-700 shrink-0">
+                        Upcoming
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
-            </div>
+              <div className="flex gap-2 mt-4">
+                <Button size="sm" className="flex-1 bg-emerald-600 hover:bg-emerald-700" onClick={() => navigate("/events")} data-testid="events-create-btn">
+                  <PlusCircle className="h-4 w-4 mr-1.5" /> Create Event
+                </Button>
+                <Button size="sm" variant="outline" className="flex-1" onClick={() => setShowReminderDialog(true)} data-testid="send-reminder-btn">
+                  <Send className="h-4 w-4 mr-1.5" /> Send Reminder
+                </Button>
+              </div>
+            </SectionCard>
+
+            <SectionCard number="6" title="Volunteer Assignment" viewAll viewAllTo="/volunteers" testId="section-volunteers">
+              {activeVolunteers.length === 0 ? (
+                <div className="text-center py-12 text-xs text-muted-foreground font-sans">
+                  No volunteers assigned today.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm min-w-[320px]">
+                    <thead>
+                      <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border">
+                        <th className="text-left font-semibold py-2">Volunteer</th>
+                        <th className="text-left font-semibold">Duty</th>
+                        <th className="text-right font-semibold">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activeVolunteers.map((v, i) => (
+                        <tr key={i} className="border-b border-border/60 last:border-0">
+                          <td className="py-2 pr-2">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-7 w-7">
+                                <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-semibold">
+                                  {initials(v.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-xs font-medium truncate">{v.name}</span>
+                            </div>
+                          </td>
+                          <td className="text-xs text-muted-foreground truncate max-w-[100px]">{v.duty}</td>
+                          <td className="text-right font-mono-num text-[10px] text-muted-foreground">{v.time}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </SectionCard>
           </div>
-          <div className="h-32 -mx-2 mb-3">
-            {getDonationsTrend().length === 0 ? (
-              <div className="h-full flex items-center justify-center border border-dashed rounded text-xs text-muted-foreground">
-                No verified donation stats available.
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={getDonationsTrend()} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="donGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(152 65% 42%)" stopOpacity={0.4} />
-                      <stop offset="100%" stopColor="hsl(152 65% 42%)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(30, 10%, 92%)" />
-                  <XAxis dataKey="t" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis hide />
-                  <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid #E5E5E5", fontSize: 11 }} />
-                  <Area type="monotone" dataKey="v" stroke="hsl(152 65% 42%)" strokeWidth={2.5} fill="url(#donGrad)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-          <div className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">Recent Donations</div>
-          <div className="space-y-1.5">
-            {recentDonorsList.length === 0 ? (
-              <div className="text-center py-4 text-xs text-muted-foreground">
-                No recent donations verified.
-              </div>
-            ) : (
-              recentDonorsList.slice(0, 4).map((d, i) => (
-                <div key={i} className="flex items-center justify-between text-xs py-1">
-                  <span className="text-foreground truncate">{d.name}</span>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="font-mono-num font-semibold text-emerald-700">₹{d.amount.toLocaleString()}</span>
-                    <span className="text-muted-foreground text-[10px] w-14 text-right">{d.time}</span>
+
+          {/* Row 3: Live Donations · Announcements · Quick Actions */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <SectionCard number="7" title="Live Donations Ledger" viewAll viewAllTo="/donations" testId="section-donations">
+              <div className="flex justify-between items-center mb-3">
+                <div>
+                  <div className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">Today's Total</div>
+                  <div className="font-heading font-bold text-3xl text-foreground font-mono-num">{formatCurrency(stats.totalDonations ?? 0)}</div>
+                  <div className="text-xs text-muted-foreground font-semibold flex items-center gap-1">
+                    {stats.donationCount ?? 0} donation transactions
                   </div>
                 </div>
-              ))
-            )}
-          </div>
-        </SectionCard>
-
-        <SectionCard number="8" title="Announcements" viewAll viewAllTo="/announcements" testId="section-announcements">
-          <div className="space-y-3">
-            {activeAnnouncements.length === 0 ? (
-              <div className="text-center py-8 text-xs text-muted-foreground">
-                No active announcements found.
               </div>
-            ) : (
-              activeAnnouncements.map((a, i) => (
-                <div key={i} className="flex gap-3">
-                  <div className={`icon-chip ${a.tone} h-10 w-10 shrink-0`}>
-                    <a.icon className="h-4 w-4" />
+              <div className="h-32 -mx-2 mb-3">
+                {getDonationsTrend().length === 0 ? (
+                  <div className="h-full flex items-center justify-center border border-dashed rounded text-xs text-muted-foreground">
+                    No verified donation stats available.
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-foreground">{a.title}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{a.desc}</div>
-                    <div className="text-[10px] text-muted-foreground mt-1">{a.when}</div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={getDonationsTrend()} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="donGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(152 65% 42%)" stopOpacity={0.4} />
+                          <stop offset="100%" stopColor="hsl(152 65% 42%)" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(30, 10%, 92%)" />
+                      <XAxis dataKey="t" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <YAxis hide />
+                      <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid #E5E5E5", fontSize: 11 }} />
+                      <Area type="monotone" dataKey="v" stroke="hsl(152 65% 42%)" strokeWidth={2.5} fill="url(#donGrad)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+              <div className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">Recent Donations</div>
+              <div className="space-y-1.5">
+                {recentDonorsList.length === 0 ? (
+                  <div className="text-center py-4 text-xs text-muted-foreground">
+                    No recent donations verified.
                   </div>
-                </div>
-              ))
-            )}
-          </div>
-        </SectionCard>
+                ) : (
+                  recentDonorsList.slice(0, 4).map((d, i) => (
+                    <div key={i} className="flex items-center justify-between text-xs py-1">
+                      <span className="text-foreground truncate">{d.name}</span>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="font-mono-num font-semibold text-emerald-700">₹{d.amount.toLocaleString()}</span>
+                        <span className="text-muted-foreground text-[10px] w-14 text-right">{d.time}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </SectionCard>
 
-        <SectionCard number="9" title="Quick Actions" testId="section-quick-actions">
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { icon: CalendarPlus, label: "Add New Booking", tone: "green", to: "/bookings" },
-              { icon: HeartHandshake, label: "Add Donation", tone: "orange", to: "/donations" },
-              { icon: Megaphone, label: "Send Announcement", tone: "purple", to: "/announcements" },
-              { icon: Sun, label: "Add Event", tone: "blue", to: "/events" },
-              { icon: Landmark, label: "Book Doli Service", tone: "orange", to: "/bookings" },
-              { icon: BarChart3, label: "View Reports", tone: "purple", to: "/reports" },
-            ].map((q) => (
-              <button
-                key={q.label}
-                onClick={() => navigate(q.to)}
-                className="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border border-border hover:border-primary/40 hover:bg-secondary/40 transition-all text-center"
-                data-testid={`quick-${q.label.replace(/\s+/g, '-').toLowerCase()}`}
-              >
-                <div className={`icon-chip ${q.tone} h-10 w-10`}>
-                  <q.icon className="h-4 w-4" />
-                </div>
-                <div className="text-[11px] font-medium text-foreground leading-tight">{q.label}</div>
-              </button>
-            ))}
+            <SectionCard number="8" title="Announcements" viewAll viewAllTo="/announcements" testId="section-announcements">
+              <div className="space-y-3">
+                {activeAnnouncements.length === 0 ? (
+                  <div className="text-center py-8 text-xs text-muted-foreground">
+                    No active announcements found.
+                  </div>
+                ) : (
+                  activeAnnouncements.map((a, i) => (
+                    <div key={i} className="flex gap-3">
+                      <div className={`icon-chip ${a.tone} h-10 w-10 shrink-0`}>
+                        <a.icon className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-foreground">{a.title}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{a.desc}</div>
+                        <div className="text-[10px] text-muted-foreground mt-1">{a.when}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </SectionCard>
+
+            <SectionCard number="9" title="Quick Actions" testId="section-quick-actions">
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { icon: CalendarPlus, label: "Add New Booking", tone: "green", to: "/bookings" },
+                  { icon: HeartHandshake, label: "Add Donation", tone: "orange", to: "/donations" },
+                  { icon: Megaphone, label: "Send Announcement", tone: "purple", to: "/announcements" },
+                  { icon: Sun, label: "Add Event", tone: "blue", to: "/events" },
+                  { icon: Landmark, label: "Book Doli Service", tone: "orange", to: "/bookings" },
+                  { icon: BarChart3, label: "View Reports", tone: "purple", to: "/reports" },
+                ].map((q) => (
+                  <button
+                    key={q.label}
+                    onClick={() => navigate(q.to)}
+                    className="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border border-border hover:border-primary/40 hover:bg-secondary/40 transition-all text-center"
+                    data-testid={`quick-${q.label.replace(/\s+/g, '-').toLowerCase()}`}
+                  >
+                    <div className={`icon-chip ${q.tone} h-10 w-10`}>
+                      <q.icon className="h-4 w-4" />
+                    </div>
+                    <div className="text-[11px] font-medium text-foreground leading-tight">{q.label}</div>
+                  </button>
+                ))}
+              </div>
+            </SectionCard>
           </div>
-        </SectionCard>
-      </div>
+        </>
+      )}
 
       {/* Send Reminder Dialog */}
       <SendReminderDialog open={showReminderDialog} onClose={() => setShowReminderDialog(false)} />

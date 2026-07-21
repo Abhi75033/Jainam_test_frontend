@@ -1,535 +1,407 @@
-import { useEffect, useState } from "react";
+/**
+ * Sidebar.jsx — JiNANAM Admin Sidebar
+ *
+ * Config-driven navigation consuming nav.config.js.
+ * Supports both "flat" and "nested" layout modes.
+ * Groups are collapsible; expanded state persists in localStorage.
+ * Feature-flagged items render with a "Soon" badge (not hidden).
+ * Role-based visibility applied from config roles[] array.
+ *
+ * NOTE: Recursive JSX components cause Babel stack overflows.
+ * This file uses explicit flat/two-level rendering instead.
+ */
+
+import { useState, useCallback } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { NAV_SECTIONS } from "@/constants/modules";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { ChevronRight, Zap } from "lucide-react";
 import {
-  Smartphone,
-  LayoutDashboard,
-  Users,
-  UsersRound,
-  HandHeart,
-  Landmark,
-  Hotel,
-  Building2,
-  Briefcase,
-  ScanLine,
-  CalendarCheck,
-  HeartHandshake,
-  PartyPopper,
-  Ticket,
-  Armchair,
-  Route,
-  Newspaper,
-  Tag,
-  Megaphone,
-  ScrollText,
-  BarChart3,
-  Calendar,
-  Sigma,
-  MapPin,
-  BellRing,
-  MessagesSquare,
-  Image,
-  HandshakeIcon,
-  LifeBuoy,
-  Bell,
-  TrendingUp,
-  Settings,
-  ClipboardList,
-  Search,
-  Database,
-  UserX,
-  Church,
-  Home as HomeIcon,
-  HelpCircle,
-  LayoutTemplate,
-  MessageSquareWarning,
-  CreditCard,
-  CalendarDays,
-  PieChart,
-  Activity,
-  GitBranch,
-  Map as MapIcon,
-  Footprints,
-  BookOpen,
-  BadgeIndianRupee,
-  Receipt,
-  Flame,
-  AlertTriangle,
-  BarChart2,
-  Globe
-} from "lucide-react";
+  FLAT_NAV,
+  NESTED_NAV,
+  NAV_LAYOUT,
+  ROUTE_TONES,
+  TONE_HEX,
+} from "@/constants/nav.config";
 
-// Map each nav route to an icon color tone
-const TONE_BY_ROUTE = {
-  "/": "yellow",
-  "/search": "blue",
-  "/members": "blue",
-  "/family": "purple",
-  "/monks": "orange",
-  "/community-pages": "pink",
-  "/temples": "orange",
-  "/dharamshalas": "green",
-  "/jain-centers": "purple",
-  "/staff": "teal",
-  "/visitors": "blue",
-  "/bookings": "green",
-  "/donations": "orange",
-  "/events": "purple",
-  "/tickets": "pink",
-  "/seating": "teal",
-  "/tours": "orange",
-  "/feed": "blue",
-  "/offers": "green",
-  "/ads": "purple",
-  "/news": "orange",
-  "/polls": "teal",
-  "/calendar": "purple",
-  "/counters": "orange",
-  "/gallery": "pink",
-  "/announcements": "red",
-  "/tracking": "blue",
-  "/devices": "teal",
-  "/alerts": "red",
-  "/communication": "blue",
-  "/volunteers": "green",
-  "/support-tickets": "orange",
-  "/notifications": "purple",
-  "/reports": "green",
-  "/settings": "orange",
-  "/audit-logs": "purple",
-  "/master-data": "teal",
-};
+// ─── Persist collapse state ────────────────────────────────────────────────────
+const STORAGE_KEY = "jinanam_nav_expanded";
 
-const TONE_HEX = {
-  yellow: "#FACC15",
-  green: "#10B981",
-  orange: "#F59E0B",
-  blue: "#3B82F6",
-  purple: "#8B5CF6",
-  red: "#EF4444",
-  teal: "#14B8A6",
-  pink: "#EC4899",
-};
+function loadExpanded() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+function saveExpanded(state) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
 
-// Flat dictionary of all available items compiled from NAV_SECTIONS + customized overrides
-const ALL_ITEMS_MAP = {
-  // Overviews
-  "DASHBOARD": { to: "/", label: "Dashboard", icon: LayoutDashboard, testId: "nav-dashboard" },
-  "SEARCH": { to: "/search", label: "Search Profile", icon: Search, testId: "nav-search" },
-  
-  // Org Profiles
-  "TEMPLES": { to: "/temples", label: "Temple Profile", icon: Landmark, testId: "nav-temples" },
-  "DHARAMSHALAS": { to: "/dharamshalas", label: "Dharamshala Profile", icon: Hotel, testId: "nav-dharamshalas" },
-  "JAIN_CENTERS": { to: "/jain-centers", label: "Jain Centre Profile", icon: Building2, testId: "nav-jain-centers" },
-  
-  // Activities
-  "EVENTS": { to: "/events", label: "Events Manager", icon: PartyPopper, testId: "nav-events" },
-  "TOURS": { to: "/tours", label: "Tours (99 Yatra)", icon: Route, testId: "nav-tours" },
-  "CHATURMAS": { to: "/chaturmas", label: "Chaturmas Setup", icon: Flame, testId: "nav-chaturmas" },
-  "FEED": { to: "/feed", label: "Community Feed", icon: Newspaper, testId: "nav-feed" },
-  "NEWS": { to: "/news", label: "Newsroom Swipe", icon: ScrollText, testId: "nav-news" },
-  "ANNOUNCEMENTS": { to: "/announcements", label: "Announcements & Notices", icon: Megaphone, testId: "nav-announcements" },
-  "POLLS": { to: "/polls", label: "Polls & Surveys", icon: BarChart3, testId: "nav-polls" },
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function isRoleAllowed(nodeRoles, isSuperAdmin) {
+  if (!nodeRoles || nodeRoles.length === 0) return true;
+  if (isSuperAdmin) return true;
+  return false;
+}
 
-  // People
-  "MEMBERS": { to: "/members", label: "Jain Members", icon: Users, testId: "nav-members" },
-  "NON-JAIN-MEMBERS": { to: "/non-jain-members", label: "Non-Jain Members", icon: UserX, testId: "nav-non-jain-members" },
-  "MONKS": { to: "/monks", label: "Maharaj Saheb", icon: HandHeart, testId: "nav-monks" },
-  "STAFF": { to: "/staff", label: "Staff Directory", icon: Briefcase, testId: "nav-staff" },
-  "VOLUNTEERS": { to: "/volunteers", label: "Volunteers Directory", icon: HandshakeIcon, testId: "nav-volunteers" },
-  
-  // Booking Control
-  "BOOKINGS": { to: "/bookings", label: "Booking Requests", icon: CalendarCheck, testId: "nav-bookings" },
-  "VISITORS": { to: "/visitors", label: "Visitors Registry", icon: ScanLine, testId: "nav-visitors" },
-  
-  // Monk Walk Tracking
-  "TRACKING": { to: "/tracking", label: "GPS Tracking Map", icon: MapPin, testId: "nav-tracking" },
-  "MANUAL-TRACKING": { to: "/manual-tracking", label: "Manual Tracking Logs", icon: Footprints, testId: "nav-manual-tracking" },
-  "JOURNEY-LOGS": { to: "/journey-logs", label: "Walk Journey Logs", icon: BookOpen, testId: "nav-journey-logs" },
-  "ROUTES": { to: "/routes", label: "Route Planner", icon: GitBranch, testId: "nav-routes" },
-  "LIVE-MAP": { to: "/live-map", label: "Monk Live Map", icon: MapIcon, testId: "nav-live-map" },
+function getTone(route) {
+  if (!route) return "blue";
+  const keys = Object.keys(ROUTE_TONES).sort((a, b) => b.length - a.length);
+  for (const key of keys) {
+    if (route.startsWith(key.split("?")[0])) return ROUTE_TONES[key];
+  }
+  return "blue";
+}
 
-  // Finances
-  "DONATIONS": { to: "/donations", label: "Donations Log", icon: HeartHandshake, testId: "nav-donations" },
-  "RECEIPTS": { to: "/receipts", label: "Donation Receipts", icon: Receipt, testId: "nav-receipts" },
+function getHex(route) {
+  return TONE_HEX[getTone(route)] || "#3B82F6";
+}
 
-  // Contents
-  "GALLERY": { to: "/gallery", label: "Media Gallery", icon: Image, testId: "nav-gallery" },
-  "CALENDAR": { to: "/calendar", label: "Tithi Timings", icon: Calendar, testId: "nav-calendar" },
-  "COUNTERS": { to: "/counters", label: "Bhojanshala Timings", icon: Sigma, testId: "nav-counters" },
-  "FAQ": { to: "/faq", label: "FAQ Rules", icon: HelpCircle, testId: "nav-faq" },
-
-  // Reports
-  "REPORTS": { to: "/reports", label: "Analytics Reports", icon: TrendingUp, testId: "nav-reports" },
-
-  // Support
-  "SUPPORT_TICKETS": { to: "/support-tickets", label: "Support Tickets", icon: LifeBuoy, testId: "nav-support-tickets" },
-  "FEEDBACK": { to: "/feedback", label: "Feedback Forms", icon: MessagesSquare, testId: "nav-feedback" },
-  "INCORRECT-REPORTS": { to: "/incorrect-reports", label: "Incorrect Info", icon: MessageSquareWarning, testId: "nav-incorrect-reports" },
-  "COMMUNICATION": { to: "/communication", label: "Contacts & Chats", icon: MessagesSquare, testId: "nav-communication" },
-  
-  // Settings
-  "SETTINGS": { to: "/settings", label: "System Settings", icon: Settings, testId: "nav-settings" },
-  "ADMINS": { to: "/admins", label: "Manage Admins", icon: UsersRound, superAdminOnly: true, testId: "nav-admins" }
-};
-
-// Proposed Role-Based Navigation Hierarchy Configurations (§1 to §6)
-const ROLE_LAYOUTS = {
-  SUPER_ADMIN: null, // Default layout containing everything
-
-  TEMPLE_ADMIN: [
-    {
-      label: "Overview",
-      items: ["DASHBOARD"]
-    },
-    {
-      label: "🛕 Temple Management",
-      items: ["TEMPLES", "GALLERY", "CALENDAR", "FAQ", "COMMUNICATION", "VOLUNTEERS", "CHATURMAS", "COUNTERS", "ANNOUNCEMENTS"]
-    },
-    {
-      label: "🙏 MS Management",
-      items: ["MONKS", "ROUTES", "TRACKING", "CHATURMAS"]
-    },
-    {
-      label: "👥 Members Ledger",
-      items: ["MEMBERS", "NON-JAIN-MEMBERS", "VOLUNTEERS"]
-    },
-    {
-      label: "👨💼 Staff Management",
-      items: ["STAFF"]
-    },
-    {
-      label: "📅 Activities & Events",
-      items: ["EVENTS", "POLLS", "ANNOUNCEMENTS", "NEWS", "FEED"]
-    },
-    {
-      label: "🛒 Booking Management",
-      items: ["BOOKINGS"]
-    },
-    {
-      label: "💰 Donations & Capital",
-      items: ["DONATIONS", "RECEIPTS"]
-    },
-    {
-      label: "👣 Visitors Tracking",
-      items: ["VISITORS"]
-    },
-    {
-      label: "📊 Reports",
-      items: ["REPORTS"]
-    },
-    {
-      label: "🎫 Support Tickets",
-      items: ["SUPPORT_TICKETS", "INCORRECT-REPORTS", "FEEDBACK"]
-    },
-    {
-      label: "⚙️ System Settings",
-      items: ["SETTINGS"]
-    }
-  ],
-
-  DHARAMSHALA_ADMIN: [
-    {
-      label: "Overview",
-      items: ["DASHBOARD"]
-    },
-    {
-      label: "🏨 Dharamshala Setup",
-      items: ["DHARAMSHALAS", "GALLERY", "COMMUNICATION", "FAQ"]
-    },
-    {
-      label: "👥 Members Ledger",
-      items: ["MEMBERS"]
-    },
-    {
-      label: "👨💼 Staff Directory",
-      items: ["STAFF"]
-    },
-    {
-      label: "🛒 Room Booking Engine",
-      items: ["BOOKINGS"]
-    },
-    {
-      label: "🍽 Bhojanshala Pass",
-      items: ["COUNTERS"]
-    },
-    {
-      label: "💰 Donations Setup",
-      items: ["DONATIONS"]
-    },
-    {
-      label: "👣 Visitors Gate Check",
-      items: ["VISITORS"]
-    },
-    {
-      label: "📊 Reports",
-      items: ["REPORTS"]
-    },
-    {
-      label: "🎫 Support Desk",
-      items: ["SUPPORT_TICKETS"]
-    },
-    {
-      label: "⚙️ Settings",
-      items: ["SETTINGS"]
-    }
-  ],
-
-  TEMPLE_DHARAMSHALA_ADMIN: [
-    {
-      label: "Overview",
-      items: ["DASHBOARD"]
-    },
-    {
-      label: "🛕 Temple",
-      items: ["TEMPLES", "GALLERY", "CALENDAR"]
-    },
-    {
-      label: "🏨 Dharamshala",
-      items: ["DHARAMSHALAS", "FAQ"]
-    },
-    {
-      label: "🙏 MS Guidance",
-      items: ["MONKS", "ROUTES"]
-    },
-    {
-      label: "👥 Members",
-      items: ["MEMBERS"]
-    },
-    {
-      label: "👨💼 Staff",
-      items: ["STAFF"]
-    },
-    {
-      label: "📅 Activities",
-      items: ["FEED", "EVENTS", "POLLS", "ANNOUNCEMENTS", "NEWS"]
-    },
-    {
-      label: "🛒 Booking Engine",
-      items: ["BOOKINGS"]
-    },
-    {
-      label: "🍽 Bhojanshala Pass",
-      items: ["COUNTERS"]
-    },
-    {
-      label: "💰 Donations Ledger",
-      items: ["DONATIONS", "RECEIPTS"]
-    },
-    {
-      label: "👣 Visitors Entry",
-      items: ["VISITORS"]
-    },
-    {
-      label: "📊 Reports",
-      items: ["REPORTS"]
-    },
-    {
-      label: "🎫 Support Desk",
-      items: ["SUPPORT_TICKETS"]
-    },
-    {
-      label: "⚙️ System Settings",
-      items: ["SETTINGS"]
-    }
-  ],
-
-  JAIN_CENTER_ADMIN: [
-    {
-      label: "Overview",
-      items: ["DASHBOARD"]
-    },
-    {
-      label: "🏢 Jain Centre Info",
-      items: ["JAIN_CENTERS", "GALLERY", "FAQ", "COMMUNICATION", "VOLUNTEERS", "ANNOUNCEMENTS"]
-    },
-    {
-      label: "🙏 MS Guidance",
-      items: ["MONKS", "ROUTES", "TRACKING", "CHATURMAS"]
-    },
-    {
-      label: "👥 Members Ledger",
-      items: ["MEMBERS"]
-    },
-    {
-      label: "👨💼 Staff Management",
-      items: ["STAFF"]
-    },
-    {
-      label: "📅 Activities Feed",
-      items: ["FEED", "EVENTS", "POLLS", "ANNOUNCEMENTS", "NEWS"]
-    },
-    {
-      label: "🛒 Room Booking",
-      items: ["BOOKINGS"]
-    },
-    {
-      label: "💰 Donations & Capital",
-      items: ["DONATIONS", "RECEIPTS"]
-    },
-    {
-      label: "👣 Visitors Registry",
-      items: ["VISITORS"]
-    },
-    {
-      label: "📊 Reports",
-      items: ["REPORTS"]
-    },
-    {
-      label: "🎫 Support Helpdesk",
-      items: ["SUPPORT_TICKETS", "FEEDBACK"]
-    },
-    {
-      label: "⚙️ Settings",
-      items: ["SETTINGS"]
-    }
-  ],
-
-  JAIN_CENTER_DHARAMSHALA_ADMIN: [
-    {
-      label: "Overview",
-      items: ["DASHBOARD"]
-    },
-    {
-      label: "🏢 Jain Centre Details",
-      items: ["JAIN_CENTERS", "GALLERY"]
-    },
-    {
-      label: "🏨 Dharamshala",
-      items: ["DHARAMSHALAS", "FAQ"]
-    },
-    {
-      label: "🙏 MS Guidance",
-      items: ["MONKS", "ROUTES"]
-    },
-    {
-      label: "👥 Members",
-      items: ["MEMBERS"]
-    },
-    {
-      label: "👨💼 Staff Directory",
-      items: ["STAFF"]
-    },
-    {
-      label: "📅 Activities",
-      items: ["FEED", "EVENTS", "POLLS", "ANNOUNCEMENTS", "NEWS"]
-    },
-    {
-      label: "🛒 Room Booking",
-      items: ["BOOKINGS"]
-    },
-    {
-      label: "🍽 Bhojanshala Pass",
-      items: ["COUNTERS"]
-    },
-    {
-      label: "💰 Donations Ledger",
-      items: ["DONATIONS", "RECEIPTS"]
-    },
-    {
-      label: "👣 Visitors Entry",
-      items: ["VISITORS"]
-    },
-    {
-      label: "📊 Reports",
-      items: ["REPORTS"]
-    },
-    {
-      label: "🎫 Support Desk",
-      items: ["SUPPORT_TICKETS"]
-    },
-    {
-      label: "⚙️ Settings",
-      items: ["SETTINGS"]
-    }
-  ],
-
-  MONK_ADMIN: [
-    {
-      label: "Overview",
-      items: ["DASHBOARD"]
-    },
-    {
-      label: "🙏 MS Profile Info",
-      items: ["MONKS", "GALLERY"]
-    },
-    {
-      label: "🚶 JiNANAM Walk Route",
-      items: ["TRACKING", "ROUTES", "JOURNEY-LOGS", "LIVE-MAP", "TEMPLES", "JAIN_CENTERS"]
-    },
-    {
-      label: "🛕 Chaturmas Details",
-      items: ["CHATURMAS"]
-    },
-    {
-      label: "📅 Activities Feed",
-      items: ["FEED", "ANNOUNCEMENTS", "EVENTS", "POLLS"]
-    },
-    {
-      label: "👥 Followers Hub",
-      items: ["MEMBERS", "COMMUNICATION"]
-    },
-    {
-      label: "📊 Reports",
-      items: ["REPORTS"]
-    },
-    {
-      label: "🎫 Support Desk",
-      items: ["SUPPORT_TICKETS", "FEEDBACK"]
-    },
-    {
-      label: "⚙️ Monk Settings",
-      items: ["SETTINGS"]
-    }
-  ]
-};
-
-export default function Sidebar({ onNavigate }) {
-  const { canDo, user, isSuperAdmin } = useAuth();
+// ─── Single leaf nav link ──────────────────────────────────────────────────────
+function NavLeaf({ item, collapsed, onNavigate, indent }) {
   const location = useLocation();
+  const Icon = item.icon;
+  const hex = getHex(item.route);
 
-  // Simulated Role State (For Super Admins to review menus)
-  const [simulatedRole, setSimulatedRole] = useState(() => {
-    return localStorage.getItem("jinanam_simulated_role") || user?.primaryRoleKey || "SUPER_ADMIN";
-  });
+  // Split route into pathname and optional query string
+  const routeBase = item.route ? item.route.split("?")[0] : null;
+  const routeQuery = item.route && item.route.includes("?") ? item.route.split("?")[1] : null;
 
-  const activeRole = isSuperAdmin ? simulatedRole : (user?.primaryRoleKey || "MEMBER");
+  const active = (() => {
+    if (!routeBase) return false;
+    if (routeBase === "/") return location.pathname === "/";
 
-  const isItemVisible = (item) => {
-    if (item.superAdminOnly) return isSuperAdmin;
-    if (!item.moduleKey) return true;
-    return canDo(item.moduleKey, "VIEW");
-  };
+    // Route has a query string → require BOTH path AND query to match
+    // e.g. "/staff?tab=attendance" is only active when URL is /staff?tab=attendance
+    if (routeQuery) {
+      return (
+        location.pathname === routeBase &&
+        location.search.includes(routeQuery)
+      );
+    }
 
-  // Compile active layouts
-  const activeLayout = ROLE_LAYOUTS[activeRole] || null;
-  const renderedSections = activeLayout
-    ? activeLayout.map(sec => {
-        const items = sec.items.map(itKey => ALL_ITEMS_MAP[itKey.toUpperCase()]).filter(Boolean);
-        return {
-          label: sec.label,
-          items: items.filter(isItemVisible)
-        };
-      }).filter(sec => sec.items.length > 0)
-    : NAV_SECTIONS;
+    // Route has no query string → use prefix match as before
+    // e.g. "/staff" is active for /staff (with or without query)
+    // but ONLY if there are no query-string siblings competing
+    return location.pathname.startsWith(routeBase);
+  })();
+
+  if (!item.route) return null;
+
+  return (
+    <li style={indent ? { paddingLeft: indent } : undefined}>
+      <NavLink
+        to={item.route}
+        onClick={onNavigate}
+        end={item.route === "/" || item.route === "/reports"}
+        title={collapsed ? item.label : undefined}
+        className={cn(
+          "flex items-center rounded-lg text-sm transition-all duration-150 group relative",
+          collapsed ? "justify-center px-0 py-2.5" : "gap-2.5 px-3 py-2.5",
+          active ? "bg-white/15 text-white" : "text-blue-100/70 hover:text-white hover:bg-white/8"
+        )}
+      >
+        <span
+          className="h-7 w-7 rounded-md flex items-center justify-center shrink-0"
+          style={
+            active
+              ? { backgroundColor: "rgba(255,255,255,0.2)", color: "#fff" }
+              : { backgroundColor: `${hex}22`, color: hex }
+          }
+        >
+          {Icon && <Icon className="h-4 w-4" />}
+        </span>
+
+        {!collapsed && (
+          <span className="truncate text-xs font-semibold flex-1">{item.label}</span>
+        )}
+
+        {!collapsed && item.featureFlag && (
+          <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shrink-0">
+            Soon
+          </span>
+        )}
+      </NavLink>
+    </li>
+  );
+}
+
+// ─── Collapsible group toggle row (non-leaf, non-top) ─────────────────────────
+function SubGroupToggle({ node, expanded, onToggle, collapsed, indent }) {
+  const Icon = node.icon;
+  const hex = getHex(node.route || (node.children && node.children[0]?.route));
+
+  if (collapsed) {
+    return (
+      <div className="flex justify-center py-1" style={indent ? { paddingLeft: indent } : undefined}>
+        <span
+          className="h-7 w-7 rounded-md flex items-center justify-center"
+          style={{ backgroundColor: `${hex}22`, color: hex }}
+          title={node.label}
+        >
+          {Icon && <Icon className="h-4 w-4" />}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div
-      className="sidebar-navy h-full w-64 shrink-0 flex flex-col"
+      className="flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer select-none hover:bg-white/5 transition-all duration-150"
+      style={indent ? { paddingLeft: indent } : undefined}
+      onClick={() => onToggle(node.id)}
+    >
+      <span
+        className="h-6 w-6 rounded-md flex items-center justify-center shrink-0"
+        style={{ backgroundColor: `${hex}22`, color: hex }}
+      >
+        {Icon && <Icon className="h-3.5 w-3.5" />}
+      </span>
+      <span className="text-xs font-semibold text-white/80 flex-1 truncate">{node.label}</span>
+      {node.featureFlag && (
+        <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+          Soon
+        </span>
+      )}
+      <ChevronRight
+        className={cn(
+          "h-3 w-3 text-white/40 transition-transform duration-200",
+          expanded ? "rotate-90" : ""
+        )}
+      />
+    </div>
+  );
+}
+
+// ─── Section header (top-level group) ─────────────────────────────────────────
+function SectionHeader({ node, expanded, onToggle, collapsed }) {
+  const Icon = node.icon;
+  const hex = getHex(node.children && node.children[0]?.route);
+
+  if (collapsed) {
+    return <div className="h-px border-t border-white/10 mx-2 mt-2 mb-1" />;
+  }
+
+  return (
+    <div
+      className="flex items-center gap-2 px-3 py-1.5 cursor-pointer select-none hover:bg-white/5 rounded-lg transition-all duration-150"
+      onClick={() => onToggle(node.id)}
+    >
+      {Icon && (
+        <span className="h-5 w-5 rounded flex items-center justify-center shrink-0" style={{ color: hex }}>
+          <Icon className="h-3.5 w-3.5" />
+        </span>
+      )}
+      <span className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-200/70 flex-1">
+        {node.label}
+      </span>
+      <ChevronRight
+        className={cn(
+          "h-3.5 w-3.5 text-blue-200/40 transition-transform duration-200",
+          expanded ? "rotate-90" : ""
+        )}
+      />
+    </div>
+  );
+}
+
+// ─── FLAT MODE renderer ────────────────────────────────────────────────────────
+function FlatNav({ collapsed, onNavigate, isSuperAdmin, expandedState, onToggle }) {
+  const sections = [];
+  let current = null;
+
+  for (const item of FLAT_NAV) {
+    if (!isRoleAllowed(item.roles, isSuperAdmin)) continue;
+
+    if (item.isSeparator) {
+      if (current) sections.push(current);
+      current = { id: item.id, label: item.label, items: [] };
+    } else {
+      if (!current) current = { id: "default", label: null, items: [] };
+      current.items.push(item);
+    }
+  }
+  if (current) sections.push(current);
+
+  return sections.map((section, si) => {
+    if (section.items.length === 0) return null;
+    const key = `flat-${si}`;
+    const isExpanded = expandedState[key] !== false;
+
+    return (
+      <div key={key} className="mb-2">
+        {section.label && !collapsed && (
+          <div
+            className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-200/60 flex items-center justify-between select-none cursor-pointer hover:text-white/90"
+            onClick={() => onToggle(key)}
+          >
+            <span>{section.label}</span>
+            <ChevronRight className={cn("h-3.5 w-3.5 transition-transform duration-200", isExpanded ? "rotate-90" : "")} />
+          </div>
+        )}
+        {(!section.label || isExpanded) && (
+          <ul className="mt-1 space-y-0.5">
+            {section.items.map((item) => (
+              <NavLeaf key={item.id} item={item} collapsed={collapsed} onNavigate={onNavigate} />
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  });
+}
+
+// ─── NESTED MODE renderer (2 explicit levels, no recursion) ───────────────────
+function NestedNav({ collapsed, onNavigate, isSuperAdmin, expandedState, onToggle }) {
+  return NESTED_NAV.map((topNode) => {
+    if (!isRoleAllowed(topNode.roles, isSuperAdmin)) return null;
+
+    const hasChildren = topNode.children && topNode.children.length > 0;
+    const topExpanded = expandedState[topNode.id] !== false;
+
+    // Leaf-only top-level (SA Dashboard, A Dashboard)
+    if (!hasChildren) {
+      return (
+        <div key={topNode.id} className="mb-1">
+          <ul>
+            <NavLeaf item={topNode} collapsed={collapsed} onNavigate={onNavigate} />
+          </ul>
+        </div>
+      );
+    }
+
+    const visibleTopChildren = topNode.children.filter((c) => isRoleAllowed(c.roles, isSuperAdmin));
+    if (visibleTopChildren.length === 0) return null;
+
+    return (
+      <div key={topNode.id} className="mb-2">
+        <SectionHeader
+          node={topNode}
+          expanded={topExpanded}
+          onToggle={onToggle}
+          collapsed={collapsed}
+        />
+
+        {!collapsed && topExpanded && (
+          <ul className="mt-1 space-y-0.5">
+            {visibleTopChildren.map((child) => {
+              if (!isRoleAllowed(child.roles, isSuperAdmin)) return null;
+
+              const hasGrandchildren = child.children && child.children.length > 0;
+              const childExpanded = expandedState[child.id] !== false;
+
+              // Level-2 leaf
+              if (!hasGrandchildren) {
+                return <NavLeaf key={child.id} item={child} collapsed={collapsed} onNavigate={onNavigate} />;
+              }
+
+              const visibleGrand = child.children.filter((g) => isRoleAllowed(g.roles, isSuperAdmin));
+              if (visibleGrand.length === 0) return null;
+
+              // Level-2 group with level-3 leaves
+              return (
+                <li key={child.id} className="list-none">
+                  <SubGroupToggle
+                    node={child}
+                    expanded={childExpanded}
+                    onToggle={onToggle}
+                    collapsed={collapsed}
+                  />
+
+                  {!collapsed && childExpanded && (
+                    <ul className="ml-3 pl-3 border-l border-white/10 space-y-0.5 mt-0.5">
+                      {visibleGrand.map((grand) => {
+                        if (!isRoleAllowed(grand.roles, isSuperAdmin)) return null;
+
+                        const hasGreat = grand.children && grand.children.length > 0;
+                        const grandExpanded = expandedState[grand.id] !== false;
+
+                        // Level-3 leaf
+                        if (!hasGreat) {
+                          return (
+                            <NavLeaf key={grand.id} item={grand} collapsed={collapsed} onNavigate={onNavigate} indent="4px" />
+                          );
+                        }
+
+                        // Level-3 group (render its children flat — max depth 4)
+                        const visibleGreat = grand.children.filter((g) => isRoleAllowed(g.roles, isSuperAdmin));
+                        return (
+                          <li key={grand.id} className="list-none">
+                            <SubGroupToggle
+                              node={grand}
+                              expanded={grandExpanded}
+                              onToggle={onToggle}
+                              collapsed={collapsed}
+                              indent="4px"
+                            />
+                            {!collapsed && grandExpanded && (
+                              <ul className="ml-3 pl-3 border-l border-white/10 space-y-0.5 mt-0.5">
+                                {visibleGreat.map((great) => (
+                                  <NavLeaf key={great.id} item={great} collapsed={collapsed} onNavigate={onNavigate} indent="8px" />
+                                ))}
+                              </ul>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    );
+  });
+}
+
+// ─── Main Sidebar ─────────────────────────────────────────────────────────────
+export default function Sidebar({ onNavigate, collapsed = false }) {
+  const { isSuperAdmin } = useAuth();
+
+  const [expandedState, setExpandedState] = useState(() => loadExpanded());
+
+  const handleToggle = useCallback((id) => {
+    setExpandedState((prev) => {
+      const next = { ...prev, [id]: prev[id] === false ? true : false };
+      saveExpanded(next);
+      return next;
+    });
+  }, []);
+
+  const layout = NAV_LAYOUT;
+
+  return (
+    <div
+      className="h-full flex flex-col overflow-hidden transition-all duration-300"
       style={{
         background: "linear-gradient(180deg, #192857 0%, #111d45 100%)",
         color: "#EFF6FF",
+        width: collapsed ? 64 : 256,
+        minWidth: collapsed ? 64 : 256,
       }}
       data-testid="admin-sidebar"
     >
-      {/* Brand */}
-      <div className="h-20 px-5 flex items-center gap-3 border-b border-white/10 shrink-0">
-        <div className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-sm overflow-hidden p-1">
-          <img src="/logo.png" alt="JiNANAM Logo" className="w-full h-full object-contain" />
+      {/* Brand Header */}
+      <div
+        className={cn(
+          "h-20 flex items-center border-b border-white/10 shrink-0 transition-all duration-300",
+          collapsed ? "justify-center px-0" : "gap-3 px-5"
+        )}
+      >
+        <div className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-sm overflow-hidden p-1 shrink-0">
+          <img src="/logo.png" alt="JiNANAM" className="w-full h-full object-contain" />
         </div>
-        <div className="leading-tight">
+        <div
+          className="leading-tight overflow-hidden transition-all duration-300"
+          style={{
+            width: collapsed ? 0 : "auto",
+            opacity: collapsed ? 0 : 1,
+            whiteSpace: "nowrap",
+          }}
+        >
           <div className="font-brand text-xl text-white tracking-wide">JiNANAM</div>
           <div className="text-[10px] tracking-[0.15em] uppercase text-white/60 mt-0.5">
             Connecting Devotion
@@ -537,83 +409,40 @@ export default function Sidebar({ onNavigate }) {
         </div>
       </div>
 
-
-      {/* Navigation List */}
-      <div className="flex-1 overflow-y-auto">
-        <nav className="py-3 px-3">
-          {renderedSections.map((section) => {
-            const visibleItems = section.items;
-            if (visibleItems.length === 0) return null;
-            return (
-              <div key={section.label} className="mb-5">
-                <div className="side-group px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-200/60">
-                  {section.label}
-                </div>
-                <ul className="mt-1 space-y-0.5">
-                  {visibleItems.map((item) => {
-                    const Icon = item.icon || LayoutDashboard;
-                    const active =
-                      item.to === "/"
-                        ? location.pathname === "/"
-                        : item.to === "/reports"
-                        ? location.pathname === "/reports"
-                        : location.pathname.startsWith(item.to);
-                    const tone = TONE_BY_ROUTE[item.to] || "blue";
-                    const hex = TONE_HEX[tone];
-                    return (
-                      <li key={item.to}>
-                        <NavLink
-                          to={item.to}
-                          onClick={onNavigate}
-                          data-testid={item.testId}
-                          end={item.to === "/reports" || item.to === "/"}
-                          className={cn(
-                            "side-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all",
-                            active && "active"
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "h-7 w-7 rounded-md flex items-center justify-center shrink-0 transition-all",
-                              active ? "bg-white/20" : ""
-                            )}
-                            style={
-                              active
-                                ? {}
-                                : { backgroundColor: `${hex}22`, color: hex }
-                            }
-                          >
-                            <Icon
-                              className="h-4 w-4"
-                              style={active ? { color: "hsl(var(--sidebar-active-fg))" } : {}}
-                            />
-                          </span>
-                          <span className="truncate text-xs font-semibold">{item.label}</span>
-                        </NavLink>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            );
-          })}
+      {/* Navigation */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-white/10">
+        <nav className="py-3 px-2">
+          {layout === "flat" ? (
+            <FlatNav
+              collapsed={collapsed}
+              onNavigate={onNavigate}
+              isSuperAdmin={isSuperAdmin}
+              expandedState={expandedState}
+              onToggle={handleToggle}
+            />
+          ) : (
+            <NestedNav
+              collapsed={collapsed}
+              onNavigate={onNavigate}
+              isSuperAdmin={isSuperAdmin}
+              expandedState={expandedState}
+              onToggle={handleToggle}
+            />
+          )}
         </nav>
       </div>
 
-      {/* App promo card */}
+      {/* Footer */}
       <div className="p-3 border-t border-white/10 shrink-0">
-        <div className="rounded-xl bg-white/5 p-3 backdrop-blur-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <Smartphone className="h-4 w-4 text-yellow-300" />
-            <div className="text-xs font-semibold text-white">JiNANAM App</div>
+        {collapsed ? (
+          <div className="flex justify-center">
+            <span className="text-white/30 text-[9px]">v1</span>
           </div>
-          <div className="text-[10px] text-white/60 leading-relaxed">
-            Stay connected with your spiritual journey. Get the mobile app.
+        ) : (
+          <div className="text-[10px] text-white/40 text-center">
+            v1.0 · Together in Seva
           </div>
-        </div>
-        <div className="text-[10px] text-white/40 text-center mt-3">
-          v1.0 · Together in Seva
-        </div>
+        )}
       </div>
     </div>
   );

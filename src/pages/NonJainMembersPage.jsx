@@ -740,7 +740,11 @@ export default function NonJainMembersPage() {
     },
     {
       key: "status", header: "Status",
-      render: (r) => <StatusBadge status={r.status || "INACTIVE"} />
+      render: (r) => (
+        <StatusBadge
+          status={r.isAutoCreated && r.status === "INACTIVE" ? "PENDING_ACTIVATION" : (r.status || "INACTIVE")}
+        />
+      )
     },
     {
       key: "dob", header: "DOB",

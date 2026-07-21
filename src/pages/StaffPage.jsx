@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { api, extractErrorMessage, API_BASE } from "@/lib/api";
 import { PageHeader } from "@/components/common/PageHeader";
 import { DataTable } from "@/components/common/DataTable";
@@ -58,11 +59,39 @@ import {
 
 // WORK_CATEGORIES and LEAVE_TYPES imported from @/constants/dropdownOptions
 
+// Map ?tab= query param values to Tabs component values
+const TAB_PARAM_MAP = {
+  attendance: "attendance_console",
+  leave: "leaves",
+  leaves: "leaves",
+  qr: "registry",
+  documents: "registry",
+  hours: "config",
+  registration: "registry",
+};
+
 export default function StaffPage() {
   const { canDo, user, isSuperAdmin } = useAuth();
   const { orgs } = useOrgs();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [selectedOrg, setSelectedOrg] = useState("");
   const orgId = user?.organizationIds?.[0] || selectedOrg || (isSuperAdmin ? orgs[0]?.id : undefined);
+
+  // Derive active tab from URL ?tab= query param
+  const urlTab = new URLSearchParams(location.search).get("tab");
+  const activeTab = (urlTab && TAB_PARAM_MAP[urlTab]) || urlTab || "dashboard";
+
+  const handleTabChange = (value) => {
+    // Reverse-map tab value to URL param
+    const reverseMap = Object.fromEntries(Object.entries(TAB_PARAM_MAP).map(([k, v]) => [v, k]));
+    const param = reverseMap[value] || (value === "dashboard" ? null : value);
+    if (param) {
+      navigate(`/staff?tab=${param}`, { replace: true });
+    } else {
+      navigate("/staff", { replace: true });
+    }
+  };
 
   // States
   const [rows, setRows] = useState([]);
@@ -438,7 +467,7 @@ export default function StaffPage() {
         </div>
       )}
 
-      <Tabs defaultValue="dashboard">
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="mb-4 bg-slate-100 p-1 rounded-xl">
           <TabsTrigger value="dashboard" className="px-5 py-2 font-bold text-xs rounded-lg">📊 Staff Dashboard</TabsTrigger>
           <TabsTrigger value="registry" className="px-5 py-2 font-bold text-xs rounded-lg">👤 Staff Registry ({rows.length})</TabsTrigger>
@@ -472,10 +501,38 @@ export default function StaffPage() {
               </div>
             </Card>
             <Card className="p-4 bg-white border rounded-xl flex items-center gap-3 shadow-sm">
-              <div className="p-3 rounded-lg bg-rose-50 text-rose-700"><AlertTriangle className="h-5 w-5 animate-pulse" /></div>
+              <div className="p-3 rounded-lg bg-rose-50 text-rose-700"><X className="h-5 w-5" /></div>
+              <div>
+                <div className="text-[10px] uppercase font-bold text-slate-400">Absent Today</div>
+                <div className="text-xl font-black text-slate-800">{metrics.absent ?? 0}</div>
+              </div>
+            </Card>
+            <Card className="p-4 bg-white border rounded-xl flex items-center gap-3 shadow-sm">
+              <div className="p-3 rounded-lg bg-amber-50 text-amber-700"><Calendar className="h-5 w-5" /></div>
+              <div>
+                <div className="text-[10px] uppercase font-bold text-slate-400">On Leave Today</div>
+                <div className="text-xl font-black text-slate-800">{metrics.onLeave ?? 0}</div>
+              </div>
+            </Card>
+            <Card className="p-4 bg-white border rounded-xl flex items-center gap-3 shadow-sm">
+              <div className="p-3 rounded-lg bg-indigo-50 text-indigo-700"><LogOut className="h-5 w-5" /></div>
+              <div>
+                <div className="text-[10px] uppercase font-bold text-slate-400">Yet to Check-Out</div>
+                <div className="text-xl font-black text-slate-800">{metrics.yetToCheckOut ?? 0}</div>
+              </div>
+            </Card>
+            <Card className="p-4 bg-white border rounded-xl flex items-center gap-3 shadow-sm">
+              <div className="p-3 rounded-lg bg-emerald-55 text-emerald-800"><UserPlus className="h-5 w-5" /></div>
+              <div>
+                <div className="text-[10px] uppercase font-bold text-slate-400">New This Month</div>
+                <div className="text-xl font-black text-slate-800">{metrics.newThisMonth ?? 0}</div>
+              </div>
+            </Card>
+            <Card className="p-4 bg-white border rounded-xl flex items-center gap-3 shadow-sm">
+              <div className="p-3 rounded-lg bg-orange-50 text-orange-700"><AlertTriangle className="h-5 w-5" /></div>
               <div>
                 <div className="text-[10px] uppercase font-bold text-slate-400">Expiring Documents</div>
-                <div className="text-xl font-black text-rose-700">{metrics.docsExpiringSoon}</div>
+                <div className="text-xl font-black text-orange-700">{metrics.docsExpiringSoon}</div>
               </div>
             </Card>
           </div>
@@ -867,12 +924,42 @@ export default function StaffPage() {
                     <SearchableSelect
                       value={form.designationId}
                       onValueChange={(v) => setForm({ ...form, designationId: v })}
-                      options={[{ value: "", label: "Select Designation" }, ...designations.map(d => ({ value: d.id, label: d.name }))]}
+                      options={[
+                        { value: "", label: "Select Designation" },
+                        ...designations.map(d => ({ value: d.id, label: d.name })),
+                        { value: "OTHER", label: "Other (Please Specify)" },
+                      ]}
                       placeholder="Select Designation"
                       className="mt-1"
                     />
                   </div>
                 </div>
+
+                {/* Other (Please Specify) for Department */}
+                {form.departmentId === "OTHER" && (
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-slate-400">Please Specify Department *</Label>
+                    <Input
+                      value={form.departmentSpecify || ""}
+                      onChange={(e) => setForm({ ...form, departmentSpecify: e.target.value })}
+                      placeholder="e.g. Yatra Management"
+                      className="h-9 mt-1"
+                    />
+                  </div>
+                )}
+
+                {/* Other (Please Specify) for Designation */}
+                {form.designationId === "OTHER" && (
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-slate-400">Please Specify Designation *</Label>
+                    <Input
+                      value={form.designationSpecify || ""}
+                      onChange={(e) => setForm({ ...form, designationSpecify: e.target.value })}
+                      placeholder="e.g. Event Coordinator"
+                      className="h-9 mt-1"
+                    />
+                  </div>
+                )}
               </div>
             )}
 

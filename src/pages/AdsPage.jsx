@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { api, extractErrorMessage } from "@/lib/api";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,10 @@ import { StatCard } from "@/components/common/StatCard";
 import { formatDate } from "@/lib/utils";
 import { EmptyState } from "@/components/common/EmptyState";
 import { EntityFormDialog } from "@/components/common/EntityFormDialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 export default function AdsPage() {
   const [ads, setAds] = useState([]);
@@ -18,6 +22,59 @@ export default function AdsPage() {
   const [reload, setReload] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
   const [createOfferOpen, setCreateOfferOpen] = useState(false);
+  const [adForm, setAdForm] = useState({
+    bannerUrl: "",
+    targetLink: "",
+    slot: "TOP_BANNER",
+    startAt: new Date().toISOString().slice(0, 10),
+    endAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+    pricingModel: "FLAT",
+    priceRate: "100"
+  });
+  const [savingAd, setSavingAd] = useState(false);
+
+  const calculateTotal = () => {
+    if (!adForm.startAt || !adForm.endAt) return null;
+    const s = new Date(adForm.startAt);
+    const e = new Date(adForm.endAt);
+    if (e <= s) return "End date must be after start date";
+    const days = Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) || 1;
+    const rate = parseFloat(adForm.priceRate) || 0;
+    if (adForm.pricingModel === "FLAT") {
+      return `Estimated Total: Rs. ${(days * rate).toLocaleString()} (${days} days @ Rs. ${rate}/day)`;
+    } else if (adForm.pricingModel === "CPC") {
+      return `CPC Model: Pay-per-click @ Rs. ${rate}/click`;
+    } else {
+      return `CPM Model: Pay-per-thousand-views @ Rs. ${rate}/1000 views`;
+    }
+  };
+
+  const handleSaveAd = async () => {
+    if (!adForm.bannerUrl) {
+      toast.error("Banner image URL is required.");
+      return;
+    }
+    setSavingAd(true);
+    try {
+      const payload = {
+        bannerUrl: adForm.bannerUrl,
+        targetLink: adForm.targetLink || undefined,
+        slot: adForm.slot,
+        startAt: new Date(adForm.startAt).toISOString(),
+        endAt: new Date(adForm.endAt).toISOString(),
+        pricingModel: adForm.pricingModel,
+        priceRate: parseFloat(adForm.priceRate) || 0
+      };
+      await api.post("/ads", payload);
+      toast.success("Advertisement created successfully.");
+      setCreateOpen(false);
+      setReload(k => k + 1);
+    } catch (e) {
+      toast.error(extractErrorMessage(e));
+    } finally {
+      setSavingAd(false);
+    }
+  };
 
   useEffect(() => {
     Promise.all([
@@ -70,12 +127,16 @@ export default function AdsPage() {
                     <Badge className="absolute top-2 left-2 bg-white/25 text-white border-white/40 text-[9px]">{b.slot || "TOP_BANNER"}</Badge>
                     <div className="text-center text-xs md:text-sm font-bold tracking-wide">{b.title || b.tagline || "Banner"}</div>
                   </div>
-                  <div className="p-3 flex items-center justify-between">
-                    <div>
+                  <div className="p-3 flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
                       <div className="text-sm font-semibold truncate">{b.title || b.name || b.slot}</div>
-                      <div className="text-[11px] text-muted-foreground">{formatDate(b.startAt || b.startDate)} — {formatDate(b.endAt || b.endDate)}</div>
+                      <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[9px]">{b.isActive ? "Active" : "Inactive"}</Badge>
                     </div>
-                    <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px]">{b.status || "Active"}</Badge>
+                    <div className="text-[11px] text-muted-foreground">{formatDate(b.startAt || b.startDate)} — {formatDate(b.endAt || b.endDate)}</div>
+                    <div className="text-[10px] font-mono text-slate-500 mt-1 flex justify-between">
+                      <span>Rate: Rs. {b.priceRate || 0} ({b.pricingModel || "FLAT"})</span>
+                      <span className="font-bold text-slate-700">Cost: Rs. {b.totalCost || 0}</span>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -143,24 +204,102 @@ export default function AdsPage() {
         )}
       </Card>
 
-      <EntityFormDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        title="Create Advertisement"
-        endpoint="/ads"
-        onSaved={() => setReload((k) => k + 1)}
-        testId="ads-form"
-        fields={[
-          { name: "bannerUrl", label: "Banner image URL", required: true, placeholder: "https://…" },
-          { name: "targetLink", label: "Click-through URL", type: "url", placeholder: "https://…" },
-          { name: "slot", label: "Placement", type: "select", required: true, options: [
-            { value: "TOP_BANNER", label: "Top Banner" },
-            { value: "IN_FEED", label: "In-Feed" },
-          ]},
-          { name: "startAt", label: "Start date", type: "date", required: true },
-          { name: "endAt", label: "End date", type: "date", required: true },
-        ]}
-      />
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="sm:max-w-md" data-testid="ads-form-dialog">
+          <DialogHeader>
+            <DialogTitle>Create Advertisement</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div>
+              <Label className="text-xs">Banner Image URL *</Label>
+              <Input
+                value={adForm.bannerUrl}
+                onChange={(e) => setAdForm({ ...adForm, bannerUrl: e.target.value })}
+                placeholder="https://example.com/banner.png"
+                data-testid="ads-form-bannerUrl"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Click-through URL (Target Link)</Label>
+              <Input
+                value={adForm.targetLink}
+                onChange={(e) => setAdForm({ ...adForm, targetLink: e.target.value })}
+                placeholder="https://example.com/target"
+                data-testid="ads-form-targetLink"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Placement Slot *</Label>
+                <select
+                  className="w-full mt-1 h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none"
+                  value={adForm.slot}
+                  onChange={(e) => setAdForm({ ...adForm, slot: e.target.value })}
+                >
+                  <option value="TOP_BANNER">Top Banner</option>
+                  <option value="IN_FEED">In-Feed</option>
+                </select>
+              </div>
+              <div>
+                <Label className="text-xs">Pricing Model *</Label>
+                <select
+                  className="w-full mt-1 h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none"
+                  value={adForm.pricingModel}
+                  onChange={(e) => setAdForm({ ...adForm, pricingModel: e.target.value })}
+                >
+                  <option value="FLAT">Flat Rate (Per Day)</option>
+                  <option value="CPC">CPC (Per Click)</option>
+                  <option value="CPM">CPM (Per 1000 Views)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div className="col-span-2">
+                <Label className="text-xs">Campaign Period *</Label>
+                <div className="flex gap-1.5 mt-1">
+                  <Input
+                    type="date"
+                    className="h-9"
+                    value={adForm.startAt}
+                    onChange={(e) => setAdForm({ ...adForm, startAt: e.target.value })}
+                  />
+                  <span className="text-slate-400 mt-2 text-xs">to</span>
+                  <Input
+                    type="date"
+                    className="h-9"
+                    value={adForm.endAt}
+                    onChange={(e) => setAdForm({ ...adForm, endAt: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs">Rate (Rs.) *</Label>
+                <Input
+                  type="number"
+                  className="mt-1 h-9"
+                  value={adForm.priceRate}
+                  onChange={(e) => setAdForm({ ...adForm, priceRate: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {/* Pricing Calculator Live Output */}
+            {adForm.startAt && adForm.endAt && (
+              <div className="p-3 bg-orange-50 border border-orange-100 rounded-lg text-xs font-semibold text-orange-850 text-center">
+                📊 {calculateTotal()}
+              </div>
+            )}
+
+          </div>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveAd} disabled={savingAd} className="bg-orange-600 hover:bg-orange-700 text-white font-bold">
+              {savingAd ? "Saving…" : "Create Ad"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <EntityFormDialog
         open={createOfferOpen}

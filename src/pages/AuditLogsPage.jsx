@@ -13,6 +13,44 @@ import { formatDateTime } from "@/lib/utils";
 import { ALL_MODULES, ALL_ACTIONS } from "@/constants/modules";
 import { Filter } from "lucide-react";
 
+const renderDiffViewer = (log) => {
+  const diff = log.diff;
+  if (!diff) {
+    return (
+      <div className="text-xs text-muted-foreground bg-slate-50 p-4 rounded-lg border text-center font-medium">
+        Structured field differences not computed (initial creation or hard delete event).
+      </div>
+    );
+  }
+  
+  return (
+    <div className="border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+      <table className="w-full text-xs text-left border-collapse">
+        <thead className="bg-slate-50 text-[10px] uppercase text-slate-500 font-semibold border-b">
+          <tr>
+            <th className="p-3 w-1/3 border-r">Property / Field</th>
+            <th className="p-3 w-1/3 bg-red-50/50 text-red-800 border-r">Original Value</th>
+            <th className="p-3 w-1/3 bg-emerald-50/50 text-emerald-800">Modified Value</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y bg-white">
+          {Object.entries(diff).map(([key, value]) => {
+            const oldVal = value.old === null || value.old === undefined ? "—" : typeof value.old === 'object' ? JSON.stringify(value.old, null, 1) : String(value.old);
+            const newVal = value.new === null || value.new === undefined ? "—" : typeof value.new === 'object' ? JSON.stringify(value.new, null, 1) : String(value.new);
+            return (
+              <tr key={key} className="hover:bg-slate-50/60">
+                <td className="p-3 font-semibold text-slate-700 border-r break-all">{key}</td>
+                <td className="p-3 bg-red-50/10 text-red-800 font-mono-num border-r break-all whitespace-pre-wrap">{oldVal}</td>
+                <td className="p-3 bg-emerald-50/10 text-emerald-800 font-mono-num break-all whitespace-pre-wrap">{newVal}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
 export default function AuditLogsPage() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -122,34 +160,32 @@ export default function AuditLogsPage() {
           </DialogHeader>
           {detailLog && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                <div><div className="text-muted-foreground">Actor</div><div className="font-medium mt-0.5">{detailLog.actor?.mobile || detailLog.actorId || "system"}</div></div>
-                <div><div className="text-muted-foreground">Module</div><div className="font-medium mt-0.5"><Badge variant="outline">{detailLog.module}</Badge></div></div>
-                <div><div className="text-muted-foreground">Action</div><div className="font-medium mt-0.5"><Badge variant="outline">{detailLog.action}</Badge></div></div>
-                <div><div className="text-muted-foreground">Entity</div><div className="font-mono text-[11px] mt-0.5">{detailLog.entityType} · {detailLog.entityId?.slice(0, 12)}</div></div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs bg-slate-50 p-3 rounded-lg border border-slate-200">
+                <div><div className="text-muted-foreground font-semibold">Actor</div><div className="font-medium mt-0.5">{detailLog.actor?.mobile || detailLog.actorId || "system"}</div></div>
+                <div><div className="text-muted-foreground font-semibold">IP Address</div><div className="font-mono mt-0.5">{detailLog.ipAddress || detailLog.ip || "—"}</div></div>
+                <div><div className="text-muted-foreground font-semibold">User Agent</div><div className="font-medium truncate max-w-[150px] mt-0.5" title={detailLog.userAgent || detailLog.deviceInfo?.userAgent}>{detailLog.userAgent || detailLog.deviceInfo?.userAgent || "—"}</div></div>
+                <div><div className="text-muted-foreground font-semibold">Critical Action</div><div className="font-medium mt-0.5">{detailLog.isCritical ? <Badge variant="destructive">YES</Badge> : "NO"}</div></div>
               </div>
+
+              <div>
+                <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-2">Visual Difference View</div>
+                {renderDiffViewer(detailLog)}
+              </div>
+
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">Before</div>
-                  <pre className="text-[11px] p-3 bg-red-50 border border-red-100 rounded-lg max-h-80 overflow-y-auto whitespace-pre-wrap break-all">
+                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">Before Structure</div>
+                  <pre className="text-[11px] p-3 bg-red-50 border border-red-100 rounded-lg max-h-48 overflow-y-auto whitespace-pre-wrap break-all font-mono">
                     {detailLog.before ? JSON.stringify(detailLog.before, null, 2) : "—"}
                   </pre>
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">After</div>
-                  <pre className="text-[11px] p-3 bg-emerald-50 border border-emerald-100 rounded-lg max-h-80 overflow-y-auto whitespace-pre-wrap break-all">
+                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">After Structure</div>
+                  <pre className="text-[11px] p-3 bg-emerald-50 border border-emerald-100 rounded-lg max-h-48 overflow-y-auto whitespace-pre-wrap break-all font-mono">
                     {detailLog.after ? JSON.stringify(detailLog.after, null, 2) : "—"}
                   </pre>
                 </div>
               </div>
-              {detailLog.metadata && (
-                <div>
-                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">Metadata</div>
-                  <pre className="text-[11px] p-3 bg-slate-50 border border-slate-200 rounded-lg max-h-40 overflow-y-auto whitespace-pre-wrap break-all">
-                    {JSON.stringify(detailLog.metadata, null, 2)}
-                  </pre>
-                </div>
-              )}
             </div>
           )}
         </DialogContent>

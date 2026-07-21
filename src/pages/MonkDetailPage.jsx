@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { toOptions } from "@/constants/dropdownOptions";
 import { useAuth } from "@/contexts/AuthContext";
+import TimePicker, { TimeRangePicker } from "@/components/common/TimePicker";
 
 // Constant arrays for community subsects and gacchas
 const DIGAMBAR_SUB = [
@@ -206,6 +207,22 @@ export default function MonkDetailPage() {
   const [reportOpen, setReportOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const parseRange = (val) => {
+    if (!val) return { from: "", to: "" };
+    const parts = val.split("-").map(s => s.trim());
+    return { from: parts[0] || "", to: parts[1] || "" };
+  };
+
+  const setRangeVal = (key, part, timeStr) => {
+    const current = editForm[key] || "";
+    const parts = current.split("-").map(s => s.trim());
+    if (part === "from") {
+      setEditForm(prev => ({ ...prev, [key]: `${timeStr} - ${parts[1] || ""}` }));
+    } else {
+      setEditForm(prev => ({ ...prev, [key]: `${parts[0] || ""} - ${timeStr}` }));
+    }
+  };
   
   // Report incorrect info state
   const [ticketDescription, setTicketDescription] = useState("");
@@ -1468,18 +1485,78 @@ export default function MonkDetailPage() {
                       <div className="border p-3.5 rounded-xl bg-slate-50 space-y-3">
                         <span className="text-xs font-bold text-slate-700 block border-b pb-1">🗣 Pravachan Timings</span>
                         <div className="grid grid-cols-3 gap-3">
-                          {eField("Morning Pravachan", "pravachanMorning")}
-                          {eField("Afternoon Pravachan", "pravachanAfternoon")}
-                          {eField("Evening Pravachan", "pravachanEvening")}
+                          <div>
+                            <Label className="text-xs font-semibold text-slate-600">Morning Pravachan</Label>
+                            <TimePicker 
+                              value={editForm.pravachanMorning} 
+                              onChange={(val) => setEditForm(prev => ({ ...prev, pravachanMorning: val }))} 
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold text-slate-600">Afternoon Pravachan</Label>
+                            <TimePicker 
+                              value={editForm.pravachanAfternoon} 
+                              onChange={(val) => setEditForm(prev => ({ ...prev, pravachanAfternoon: val }))} 
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold text-slate-600">Evening Pravachan</Label>
+                            <TimePicker 
+                              value={editForm.pravachanEvening} 
+                              onChange={(val) => setEditForm(prev => ({ ...prev, pravachanEvening: val }))} 
+                              className="mt-1"
+                            />
+                          </div>
                         </div>
                       </div>
 
                       <div className="border p-3.5 rounded-xl bg-slate-50 space-y-3">
                         <span className="text-xs font-bold text-slate-700 block border-b pb-1">🧘 Darshan & Interaction Slots</span>
-                        <div className="grid grid-cols-3 gap-3">
-                          {eField("Morning Interaction", "darshanMorning")}
-                          {eField("Afternoon Interaction", "darshanAfternoon")}
-                          {eField("Evening Interaction", "darshanEvening")}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div>
+                            <Label className="text-xs font-semibold text-slate-600 mb-1 block">Morning Interaction</Label>
+                            {(() => {
+                              const range = parseRange(editForm.darshanMorning);
+                              return (
+                                <TimeRangePicker
+                                  fromValue={range.from}
+                                  toValue={range.to}
+                                  onFromChange={(val) => setRangeVal("darshanMorning", "from", val)}
+                                  onToChange={(val) => setRangeVal("darshanMorning", "to", val)}
+                                />
+                              );
+                            })()}
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold text-slate-600 mb-1 block">Afternoon Interaction</Label>
+                            {(() => {
+                              const range = parseRange(editForm.darshanAfternoon);
+                              return (
+                                <TimeRangePicker
+                                  fromValue={range.from}
+                                  toValue={range.to}
+                                  onFromChange={(val) => setRangeVal("darshanAfternoon", "from", val)}
+                                  onToChange={(val) => setRangeVal("darshanAfternoon", "to", val)}
+                                />
+                              );
+                            })()}
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold text-slate-600 mb-1 block">Evening Interaction</Label>
+                            {(() => {
+                              const range = parseRange(editForm.darshanEvening);
+                              return (
+                                <TimeRangePicker
+                                  fromValue={range.from}
+                                  toValue={range.to}
+                                  onFromChange={(val) => setRangeVal("darshanEvening", "from", val)}
+                                  onToChange={(val) => setRangeVal("darshanEvening", "to", val)}
+                                />
+                              );
+                            })()}
+                          </div>
                         </div>
                       </div>
 
@@ -1487,6 +1564,45 @@ export default function MonkDetailPage() {
                         <Label className="text-xs font-semibold">Maryada / Guidelines</Label>
                         <textarea rows={3} className="w-full mt-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none"
                           value={editForm.maryadaGuidelines} onChange={(e) => setEditForm({ ...editForm, maryadaGuidelines: e.target.value })} />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 border-t pt-3">
+                        <div>
+                          <Label className="text-xs font-semibold block mb-1.5">Languages Spoken</Label>
+                          <div className="grid grid-cols-3 gap-2 p-2 border rounded-lg bg-white">
+                            {["Hindi", "Gujarati", "Marwari", "Sanskrit", "Prakrit", "English"].map((lang) => {
+                              const checked = (editForm.languagesSpoken || []).includes(lang);
+                              return (
+                                <label key={lang} className="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer select-none">
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={(e) => {
+                                      const current = editForm.languagesSpoken || [];
+                                      const next = e.target.checked
+                                        ? [...current, lang]
+                                        : current.filter(l => l !== lang);
+                                      setEditForm({ ...editForm, languagesSpoken: next });
+                                    }}
+                                    className="rounded border-slate-300 text-orange-500 focus:ring-orange-500 h-3.5 w-3.5"
+                                  />
+                                  <span>{lang}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label className="text-xs font-semibold">Health Status</Label>
+                          <select className="w-full mt-1 h-9 rounded-md border border-slate-250 bg-white px-3 text-sm focus:outline-none"
+                            value={editForm.healthStatus} onChange={(e) => setEditForm({ ...editForm, healthStatus: e.target.value })}>
+                            <option value="Stable">Stable</option>
+                            <option value="Under Care">Under Care</option>
+                            <option value="Travel Restricted">Travel Restricted</option>
+                            <option value="Not Available for Darshan">Not Available for Darshan</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
                   )}

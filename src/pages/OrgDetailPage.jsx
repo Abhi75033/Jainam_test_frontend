@@ -28,6 +28,7 @@ import { formatDate } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { toOptions } from "@/constants/dropdownOptions";
+import TimePicker, { TimeRangePicker } from "@/components/common/TimePicker";
 
 const STATUSES = ["AVAILABLE", "BOOKED", "PENDING"];
 
@@ -418,18 +419,24 @@ function ContactsTab({ contacts, apiPrefix, orgId, onRefresh, canEdit }) {
 /* ─── Notices Tab ───────────────────────────────────────────────────────────── */
 function NoticesTab({ notices, apiPrefix, orgId, onRefresh, canEdit }) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ title: "", content: "" });
+  const [form, setForm] = useState({ title: "", body: "", isPinned: false, expiryDate: "" });
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const save = async () => {
-    if (!form.title || !form.content) { toast.error("Fill in title and notice text."); return; }
+    if (!form.title || !form.body) { toast.error("Fill in title and notice text."); return; }
     setSaving(true);
     try {
-      await api.post(`${apiPrefix}/${orgId}/notices`, form);
+      const payload = {
+        title: form.title,
+        body: form.body,           // B4 Fix: backend expects 'body' not 'content'
+        isPinned: form.isPinned,
+        ...(form.expiryDate ? { endDate: new Date(form.expiryDate).toISOString() } : {}),
+      };
+      await api.post(`${apiPrefix}/${orgId}/notices`, payload);
       toast.success("Notice published.");
       setOpen(false);
-      setForm({ title: "", content: "" });
+      setForm({ title: "", body: "", isPinned: false, expiryDate: "" });
       onRefresh();
     } catch (e) { toast.error(extractErrorMessage(e)); }
     finally { setSaving(false); }
@@ -453,22 +460,49 @@ function NoticesTab({ notices, apiPrefix, orgId, onRefresh, canEdit }) {
       )}
       {notices?.length > 0 ? (
         <div className="space-y-3">
-          {notices.map((n, i) => (
-            <Card key={n.id || i} className="p-4 group relative border-l-4 border-l-orange-500 bg-white">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h4 className="font-bold text-slate-800">{n.title}</h4>
-                  <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">{n.content}</p>
-                  <span className="text-[10px] text-slate-400 block mt-2 font-mono-num">{formatDate(n.createdAt)}</span>
+          {notices.map((n, i) => {
+            const isExpired = n.endDate && new Date(n.endDate) < new Date();
+            return (
+              <Card
+                key={n.id || i}
+                className={`p-4 group relative border-l-4 bg-white ${isExpired ? "border-l-slate-300 opacity-70" : "border-l-orange-500"}`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-bold text-slate-800">{n.title}</h4>
+                      {n.isPinned && (
+                        <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 border border-orange-200">
+                          📌 Pinned
+                        </span>
+                      )}
+                      {isExpired && (
+                        <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 border border-red-200">
+                          Notice Expired
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">{n.body || n.content}</p>
+                    <div className="flex items-center gap-3 mt-2">
+                      <span className="text-[10px] text-slate-400 font-mono-num">
+                        Published: {formatDate(n.createdAt)}
+                      </span>
+                      {n.endDate && (
+                        <span className={`text-[10px] font-mono-num ${isExpired ? "text-red-400" : "text-slate-400"}`}>
+                          Expires: {formatDate(n.endDate)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {canEdit && (
+                    <button onClick={() => setDeleteTarget(n)} className="opacity-0 group-hover:opacity-100 text-red-455 hover:text-red-650 shrink-0 ml-2">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
-                {canEdit && (
-                  <button onClick={() => setDeleteTarget(n)} className="opacity-0 group-hover:opacity-100 text-red-455 hover:text-red-650 shrink-0">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       ) : (
         <EmptyState title="No notices published" icon={BellRing} description="Notice board updates appear here." />
@@ -484,9 +518,17 @@ function NoticesTab({ notices, apiPrefix, orgId, onRefresh, canEdit }) {
             </div>
             <div>
               <Label className="text-xs">Notice Content *</Label>
-              <textarea rows={4} className="w-full mt-1 rounded-md border border-slate-205 bg-white px-3 py-2 text-sm focus:outline-none"
-                value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} placeholder="Write notice details…" />
+              <textarea rows={4} className="w-full mt-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} placeholder="Write notice details…" />
             </div>
+            <div>
+              <Label className="text-xs">Expiry Date (optional)</Label>
+              <Input type="date" className="mt-1" value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} />
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={form.isPinned} onChange={(e) => setForm({ ...form, isPinned: e.target.checked })} />
+              <span className="text-sm text-slate-700">Pin this notice to the top</span>
+            </label>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
@@ -500,8 +542,11 @@ function NoticesTab({ notices, apiPrefix, orgId, onRefresh, canEdit }) {
 }
 
 /* ─── Reviews Tab ───────────────────────────────────────────────────────────── */
-function ReviewsTab({ reviews, apiPrefix, orgId, onRefresh, isSuperAdmin }) {
+function ReviewsTab({ reviews, apiPrefix, orgId, onRefresh, isSuperAdmin, canEdit }) {
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyText, setReplyText] = useState("");
+  const [replying, setReplying] = useState(false);
 
   const doDelete = async () => {
     try {
@@ -512,22 +557,102 @@ function ReviewsTab({ reviews, apiPrefix, orgId, onRefresh, isSuperAdmin }) {
     } catch (e) { toast.error(extractErrorMessage(e)); }
   };
 
+  const handleReplySubmit = async (reviewId) => {
+    if (!replyText.trim()) return;
+    setReplying(true);
+    try {
+      await api.patch(`${apiPrefix}/reviews/${reviewId}/reply`, { adminReply: replyText.trim() });
+      toast.success("Reply submitted successfully!");
+      setReplyingTo(null);
+      setReplyText("");
+      onRefresh();
+    } catch (e) {
+      toast.error(extractErrorMessage(e));
+    } finally {
+      setReplying(false);
+    }
+  };
+
   return (
     <div>
       {reviews?.length > 0 ? (
         <div className="space-y-3 divide-y divide-slate-100">
           {reviews.map((r, i) => (
             <div key={r.id || i} className="pt-3 first:pt-0 flex items-start justify-between group">
-              <div>
+              <div className="flex-1 mr-4">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-xs text-slate-800">{r.member?.fullName || "Verified Visitor"}</span>
                   <Stars rating={r.rating} />
                 </div>
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed">{r.comment}</p>
                 <span className="text-[10px] text-slate-400 block mt-1 font-mono-num">{formatDate(r.createdAt)}</span>
+
+                {r.adminReply ? (
+                  <div className="mt-2 ml-4 p-2 bg-slate-50 border-l-2 border-orange-500 rounded text-xs">
+                    <span className="font-bold text-slate-700 block mb-0.5">Admin Response:</span>
+                    <p className="text-slate-655 leading-relaxed">{r.adminReply}</p>
+                    {canEdit && (
+                      <button
+                        onClick={() => {
+                          setReplyingTo(r);
+                          setReplyText(r.adminReply);
+                        }}
+                        className="mt-1 text-[10px] text-orange-500 font-semibold hover:underline"
+                      >
+                        Edit Reply
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  canEdit && !replyingTo && (
+                    <button
+                      onClick={() => {
+                        setReplyingTo(r);
+                        setReplyText("");
+                      }}
+                      className="mt-2 text-[10px] text-orange-500 font-semibold hover:underline flex items-center gap-1"
+                    >
+                      <MessageSquare className="h-3 w-3" /> Reply as Admin
+                    </button>
+                  )
+                )}
+
+                {replyingTo?.id === r.id && (
+                  <div className="mt-2 ml-4 p-3 bg-slate-50 border rounded-lg space-y-2">
+                    <Label className="text-[10px] font-bold uppercase text-slate-500">Write Admin Reply</Label>
+                    <textarea
+                      className="w-full text-xs p-2 border rounded focus:outline-none bg-white"
+                      rows={2}
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      placeholder="Type your response..."
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-[10px]"
+                        onClick={() => {
+                          setReplyingTo(null);
+                          setReplyText("");
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-7 text-[10px] bg-orange-600 hover:bg-orange-700 text-white"
+                        onClick={() => handleReplySubmit(r.id)}
+                        disabled={replying || !replyText.trim()}
+                      >
+                        {replying ? "Saving..." : "Submit Reply"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
               {isSuperAdmin && (
-                <button onClick={() => setDeleteTarget(r)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-655">
+                <button onClick={() => setDeleteTarget(r)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-655 shrink-0">
                   <Trash2 className="h-4 w-4" />
                 </button>
               )}
@@ -980,6 +1105,47 @@ function EditOrgDialog({ open, onClose, org, apiPrefix, onSaved, entityLabel }) 
     } finally {
       setDeitySaving(false);
     }
+  };
+
+  const parseRange = (val) => {
+    if (!val) return { from: "", to: "" };
+    const parts = val.split("-").map(s => s.trim());
+    return { from: parts[0] || "", to: parts[1] || "" };
+  };
+
+  const parseCharges = (val) => {
+    if (!val || !val.includes("|")) return "";
+    return val.split("|")[0].replace("Rs.", "").trim();
+  };
+
+  const parseTimeFromRange = (val) => {
+    if (!val) return "";
+    if (val.includes("|")) {
+      return val.split("|")[1].trim();
+    }
+    return val;
+  };
+
+  const setTimeRangeVal = (key, part, timeStr) => {
+    const current = form[key] || "";
+    const chargesPart = current.includes("|") ? current.split("|")[0].trim() + " | " : "";
+    const timingPart = current.includes("|") ? current.split("|")[1].trim() : current;
+    const parts = timingPart.split("-").map(s => s.trim());
+    
+    let nextTiming = "";
+    if (part === "from") {
+      nextTiming = `${timeStr} - ${parts[1] || ""}`;
+    } else {
+      nextTiming = `${parts[0] || ""} - ${timeStr}`;
+    }
+    setForm(prev => ({ ...prev, [key]: `${chargesPart}${nextTiming}` }));
+  };
+
+  const setChargesVal = (key, chargesStr) => {
+    const current = form[key] || "";
+    const timingPart = current.includes("|") ? current.split("|")[1].trim() : current;
+    const nextVal = chargesStr ? `Rs. ${chargesStr} | ${timingPart}` : timingPart;
+    setForm(prev => ({ ...prev, [key]: nextVal }));
   };
 
   useEffect(() => {
@@ -1660,10 +1826,49 @@ function EditOrgDialog({ open, onClose, org, apiPrefix, onSaved, entityLabel }) 
                       {toggle("Bhojanshala (Food) Available", "hasBhojanshala")}
                       {form.hasBhojanshala && (
                         <div className="space-y-3 pl-6 border-l-2 border-l-orange-500">
-                          <div className="grid grid-cols-3 gap-3">
-                            {field("Breakfast Timing", "bhojanshalaBreakfast", "text", "07:00 AM - 08:30 AM")}
-                            {field("Lunch Timing", "bhojanshalaLunch", "text", "11:30 AM - 01:00 PM")}
-                            {field("Dinner Timing", "bhojanshalaDinner", "text", "05:00 PM - 06:00 PM")}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                              <Label className="text-xs mb-1 block">Breakfast Timing</Label>
+                              {(() => {
+                                const range = parseRange(form.bhojanshalaBreakfast);
+                                return (
+                                  <TimeRangePicker
+                                    fromValue={range.from}
+                                    toValue={range.to}
+                                    onFromChange={(val) => setTimeRangeVal("bhojanshalaBreakfast", "from", val)}
+                                    onToChange={(val) => setTimeRangeVal("bhojanshalaBreakfast", "to", val)}
+                                  />
+                                );
+                              })()}
+                            </div>
+                            <div>
+                              <Label className="text-xs mb-1 block">Lunch Timing</Label>
+                              {(() => {
+                                const range = parseRange(form.bhojanshalaLunch);
+                                return (
+                                  <TimeRangePicker
+                                    fromValue={range.from}
+                                    toValue={range.to}
+                                    onFromChange={(val) => setTimeRangeVal("bhojanshalaLunch", "from", val)}
+                                    onToChange={(val) => setTimeRangeVal("bhojanshalaLunch", "to", val)}
+                                  />
+                                );
+                              })()}
+                            </div>
+                            <div>
+                              <Label className="text-xs mb-1 block">Dinner Timing</Label>
+                              {(() => {
+                                const range = parseRange(form.bhojanshalaDinner);
+                                return (
+                                  <TimeRangePicker
+                                    fromValue={range.from}
+                                    toValue={range.to}
+                                    onFromChange={(val) => setTimeRangeVal("bhojanshalaDinner", "from", val)}
+                                    onToChange={(val) => setTimeRangeVal("bhojanshalaDinner", "to", val)}
+                                  />
+                                );
+                              })()}
+                            </div>
                           </div>
                           <div className="grid grid-cols-3 gap-3">
                             <div>
@@ -1705,7 +1910,20 @@ function EditOrgDialog({ open, onClose, org, apiPrefix, onSaved, entityLabel }) 
                                 <option value="Both">Both AC and Non-AC</option>
                               </select>
                             </div>
-                            {field("Office Timings", "dharamshalaOffice", "text", "09:00 AM - 08:00 PM")}
+                            <div>
+                              <Label className="text-xs mb-1 block">Office Timings</Label>
+                              {(() => {
+                                const range = parseRange(form.dharamshalaOffice);
+                                return (
+                                  <TimeRangePicker
+                                    fromValue={range.from}
+                                    toValue={range.to}
+                                    onFromChange={(val) => setTimeRangeVal("dharamshalaOffice", "from", val)}
+                                    onToChange={(val) => setTimeRangeVal("dharamshalaOffice", "to", val)}
+                                  />
+                                );
+                              })()}
+                            </div>
                             {field("Contact Phone", "dharamshalaPhone", "tel", "+91...")}
                           </div>
                           <div className="grid grid-cols-2 gap-3">
@@ -1730,7 +1948,20 @@ function EditOrgDialog({ open, onClose, org, apiPrefix, onSaved, entityLabel }) 
                       {toggle("Pathshala Available", "hasPathshala")}
                       {form.hasPathshala && (
                         <div className="grid grid-cols-3 gap-3 pl-6 border-l-2 border-l-orange-500">
-                          {field("Pathshala Timings", "pathshalaTimings", "text", "04:30 PM - 06:00 PM")}
+                            <div>
+                              <Label className="text-xs mb-1 block">Pathshala Timings</Label>
+                              {(() => {
+                                const range = parseRange(form.pathshalaTimings);
+                                return (
+                                  <TimeRangePicker
+                                    fromValue={range.from}
+                                    toValue={range.to}
+                                    onFromChange={(val) => setTimeRangeVal("pathshalaTimings", "from", val)}
+                                    onToChange={(val) => setTimeRangeVal("pathshalaTimings", "to", val)}
+                                  />
+                                );
+                              })()}
+                            </div>
                           {field("Pathshala Days", "pathshalaDays", "text", "Sat, Sun")}
                           {field("Teacher Name", "pathshalaTeacher", "text", "Shastriji / Teacher")}
                         </div>
@@ -1747,11 +1978,75 @@ function EditOrgDialog({ open, onClose, org, apiPrefix, onSaved, entityLabel }) 
                   {toggle("Bhojanalay Available Inside?", "hasBhojanshala")}
                   {form.hasBhojanshala && (
                     <div className="space-y-3 pl-6 border-l-2 border-l-orange-500">
-                      <div className="grid grid-cols-2 gap-3">
-                        {field("Breakfast Charges & Timings", "bhojanshalaBreakfast", "text", "Rs. 50 | 07:30 AM - 09:00 AM")}
-                        {field("Lunch Charges & Timings", "bhojanshalaLunch", "text", "Rs. 100 | 11:30 AM - 01:00 PM")}
-                        {field("Dinner Charges & Timings", "bhojanshalaDinner", "text", "Rs. 80 | 05:00 PM - 06:00 PM")}
-                        {field("Contact Person / Manager", "bhojanshalaContact", "text", "Caretaker Name")}
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-3 rounded-lg bg-slate-50">
+                          <div>
+                            <Label className="text-xs font-semibold">Breakfast Charges (Rs.)</Label>
+                            <Input 
+                              className="h-9 mt-1 bg-white" 
+                              value={parseCharges(form.bhojanshalaBreakfast)} 
+                              onChange={(e) => setChargesVal("bhojanshalaBreakfast", e.target.value)} 
+                              placeholder="e.g. 50"
+                            />
+                            <Label className="text-xs font-semibold mt-2 mb-1 block">Breakfast Timings</Label>
+                            {(() => {
+                              const range = parseRange(parseTimeFromRange(form.bhojanshalaBreakfast));
+                              return (
+                                <TimeRangePicker
+                                  fromValue={range.from}
+                                  toValue={range.to}
+                                  onFromChange={(val) => setTimeRangeVal("bhojanshalaBreakfast", "from", val)}
+                                  onToChange={(val) => setTimeRangeVal("bhojanshalaBreakfast", "to", val)}
+                                />
+                              );
+                            })()}
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold">Lunch Charges (Rs.)</Label>
+                            <Input 
+                              className="h-9 mt-1 bg-white" 
+                              value={parseCharges(form.bhojanshalaLunch)} 
+                              onChange={(e) => setChargesVal("bhojanshalaLunch", e.target.value)} 
+                              placeholder="e.g. 100"
+                            />
+                            <Label className="text-xs font-semibold mt-2 mb-1 block">Lunch Timings</Label>
+                            {(() => {
+                              const range = parseRange(parseTimeFromRange(form.bhojanshalaLunch));
+                              return (
+                                <TimeRangePicker
+                                  fromValue={range.from}
+                                  toValue={range.to}
+                                  onFromChange={(val) => setTimeRangeVal("bhojanshalaLunch", "from", val)}
+                                  onToChange={(val) => setTimeRangeVal("bhojanshalaLunch", "to", val)}
+                                />
+                              );
+                            })()}
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold">Dinner Charges (Rs.)</Label>
+                            <Input 
+                              className="h-9 mt-1 bg-white" 
+                              value={parseCharges(form.bhojanshalaDinner)} 
+                              onChange={(e) => setChargesVal("bhojanshalaDinner", e.target.value)} 
+                              placeholder="e.g. 80"
+                            />
+                            <Label className="text-xs font-semibold mt-2 mb-1 block">Dinner Timings</Label>
+                            {(() => {
+                              const range = parseRange(parseTimeFromRange(form.bhojanshalaDinner));
+                              return (
+                                <TimeRangePicker
+                                  fromValue={range.from}
+                                  toValue={range.to}
+                                  onFromChange={(val) => setTimeRangeVal("bhojanshalaDinner", "from", val)}
+                                  onToChange={(val) => setTimeRangeVal("bhojanshalaDinner", "to", val)}
+                                />
+                              );
+                            })()}
+                          </div>
+                          <div>
+                            {field("Contact Person / Manager", "bhojanshalaContact", "text", "Caretaker Name")}
+                          </div>
+                        </div>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -2556,7 +2851,7 @@ export default function OrgDetailPage({ basePath, entityLabel, apiPrefix }) {
         </TabsContent>
 
         <TabsContent value="reviews">
-          <ReviewsTab reviews={org.reviews} apiPrefix={apiPrefix} orgId={org.id} onRefresh={loadOrg} isSuperAdmin={isSuperAdmin} />
+          <ReviewsTab reviews={org.reviews} apiPrefix={apiPrefix} orgId={org.id} onRefresh={loadOrg} isSuperAdmin={isSuperAdmin} canEdit={canEdit} />
         </TabsContent>
 
         <TabsContent value="dhaja">

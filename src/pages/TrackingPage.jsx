@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { api, extractErrorMessage } from "@/lib/api";
 import { PageHeader } from "@/components/common/PageHeader";
 import { DataTable } from "@/components/common/DataTable";
 import { StatCard } from "@/components/common/StatCard";
@@ -10,12 +10,62 @@ import { LiveBadge } from "@/components/common/LiveBadge";
 import { formatDateTime } from "@/lib/utils";
 import { useSocket } from "@/hooks/useSocket";
 import { Route as RouteIcon, MapPin, Battery, AlertTriangle, Signal } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import TimePicker from "@/components/common/TimePicker";
+import { toast } from "sonner";
 
 export default function TrackingPage() {
   const [journeys, setJourneys] = useState([]);
   const [loading, setLoading] = useState(true);
   const [locations, setLocations] = useState({}); // monkId -> {lat,lng,battery,ts}
   const [alerts, setAlerts] = useState([]);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedJourney, setSelectedJourney] = useState(null);
+  const [eventForm, setEventForm] = useState({ type: "ARRIVAL", templeId: "", note: "", date: "", time: "08:00 AM" });
+  const [savingEvent, setSavingEvent] = useState(false);
+
+  const handleSaveEvent = async () => {
+    if (!eventForm.time) {
+      toast.error("Time is required.");
+      return;
+    }
+    setSavingEvent(true);
+    try {
+      const timePart = eventForm.time; // "HH:MM AM"
+      const match = timePart.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+      let isoString = undefined;
+      if (match) {
+        let hrs = parseInt(match[1]);
+        const mins = match[2];
+        const period = match[3].toUpperCase();
+        if (period === "PM" && hrs < 12) hrs += 12;
+        if (period === "AM" && hrs === 12) hrs = 0;
+        const timeStr = `${String(hrs).padStart(2, "0")}:${mins}:00`;
+        isoString = new Date(`${eventForm.date}T${timeStr}`).toISOString();
+      }
+
+      await api.post(`/tracking/journeys/${selectedJourney.id}/events`, {
+        type: eventForm.type,
+        templeId: eventForm.templeId || undefined,
+        note: eventForm.note || undefined,
+        timestamp: isoString,
+      });
+
+      toast.success("Journey event logged successfully.");
+      setOpenDialog(false);
+      
+      const res = await api.get("/tracking/journeys/active");
+      setJourneys(res.data?.data?.items || res.data?.data || []);
+    } catch (e) {
+      toast.error(extractErrorMessage(e));
+    } finally {
+      setSavingEvent(false);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -69,6 +119,29 @@ export default function TrackingPage() {
     } },
     { key: "eta", header: "ETA", render: (r) => <span className="text-xs">{formatDateTime(r.eta)}</span> },
     { key: "status", header: "Status", render: (r) => <StatusBadge status={r.status || "ONGOING"} /> },
+    {
+      key: "actions", header: "Actions",
+      render: (r) => (
+        <Button 
+          size="sm" 
+          variant="outline" 
+          onClick={() => {
+            setSelectedJourney(r);
+            setEventForm({
+              type: "ARRIVAL",
+              templeId: r.route?.stops?.[r.currentStopIndex]?.templeId || "",
+              note: "",
+              date: new Date().toISOString().slice(0, 10),
+              time: "08:00 AM"
+            });
+            setOpenDialog(true);
+          }}
+          className="h-8 text-xs font-semibold border-orange-200 text-orange-600 hover:bg-orange-50"
+        >
+          Log Event
+        </Button>
+      )
+    }
   ];
 
   return (
@@ -114,6 +187,91 @@ export default function TrackingPage() {
         emptyTitle="No active journeys"
         emptyDescription="Start a journey from the monk profile to see live tracking here."
       />
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Log Vihar Journey Event</DialogTitle>
+          </DialogHeader>
+          {selectedJourney && (
+            <div className="space-y-4 pt-2">
+              <div className="text-xs text-slate-500 bg-slate-50 p-2.5 rounded-lg border">
+                <strong>Monk:</strong> {selectedJourney.monk?.dikshaName} ({selectedJourney.monk?.publicId})<br />
+                <strong>Route:</strong> {selectedJourney.route?.name}
+              </div>
+
+              <div>
+                <Label className="text-xs">Event Type *</Label>
+                <select
+                  className="w-full mt-1 h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none"
+                  value={eventForm.type}
+                  onChange={(e) => setEventForm({ ...eventForm, type: e.target.value })}
+                >
+                  <option value="ARRIVAL">Arrival at Stop</option>
+                  <option value="DEPARTURE">Departure from Stop</option>
+                  <option value="DELAY">Vihar Delay Alert</option>
+                  <option value="MANUAL_UPDATE">Location Checkpoint</option>
+                </select>
+              </div>
+
+              <div>
+                <Label className="text-xs">Select Stop / Checkpoint *</Label>
+                <select
+                  className="w-full mt-1 h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none"
+                  value={eventForm.templeId}
+                  onChange={(e) => setEventForm({ ...eventForm, templeId: e.target.value })}
+                >
+                  <option value="">Select Stop...</option>
+                  {(selectedJourney.route?.stops || []).map((stop, idx) => (
+                    <option key={idx} value={stop.templeId || stop.templeName}>
+                      Stop {idx + 1}: {stop.templeName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Event Date *</Label>
+                  <Input
+                    type="date"
+                    className="mt-1 h-9"
+                    value={eventForm.date}
+                    onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Event Time *</Label>
+                  <TimePicker
+                    value={eventForm.time}
+                    onChange={(val) => setEventForm({ ...eventForm, time: val })}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs">Notes / Details (Optional)</Label>
+                <Textarea
+                  value={eventForm.note}
+                  onChange={(e) => setEventForm({ ...eventForm, note: e.target.value })}
+                  placeholder="e.g. Arrived safely, taking rest..."
+                  rows={2}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setOpenDialog(false)}>Cancel</Button>
+            <Button 
+              onClick={handleSaveEvent} 
+              disabled={savingEvent} 
+              className="bg-orange-600 hover:bg-orange-700 text-white font-bold"
+            >
+              {savingEvent ? "Submitting..." : "Log Event"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -16,6 +16,7 @@ const STATUS_STYLES = {
   // Generic
   ACTIVE: "bg-emerald-100 text-emerald-800 border-emerald-200",
   INACTIVE: "bg-slate-100 text-slate-700 border-slate-200",
+  PENDING_ACTIVATION: "bg-amber-100 text-amber-800 border-amber-200", // B8 status badge styling
   SUSPENDED: "bg-red-100 text-red-800 border-red-200",
   BLOCKED: "bg-red-100 text-red-800 border-red-200",
   DELETED: "bg-slate-100 text-slate-700 border-slate-200",

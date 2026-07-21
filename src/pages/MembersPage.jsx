@@ -326,7 +326,10 @@ function RegisterMemberDialog({ onCreated }) {
 
   const submit = async () => {
     if (!form.firstName) { toast.error("First name is required."); return; }
+    if (!form.surname)   { toast.error("Surname is required."); return; }
     if (!form.mobile)    { toast.error("Mobile is required."); return; }
+    if (!form.gender)    { toast.error("Gender is required."); return; }
+    if (!form.dob)       { toast.error("Date of Birth is required."); return; }
     if (cat === "jain" && !form.agreeData) { toast.error("Please accept the mandatory data processing consent."); return; }
     
     setLoading(true);
@@ -419,14 +422,15 @@ function RegisterMemberDialog({ onCreated }) {
     { id: "address", label: "📍 Addresses" },
     { id: "health", label: "🏥 Health & Emergency" },
     { id: "volunteer", label: "🙏 Volunteering" },
+    { id: "notifications", label: "🔔 Family & Alerts" },
     { id: "consent", label: "📝 Consents" }
   ];
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button data-testid="members-add-button">
-          <UserPlus className="h-4 w-4 mr-2" /> Register Member
+        <Button data-testid="members-add-button" className="h-11 px-6 text-sm font-bold shadow-md bg-orange-500 hover:bg-orange-600 text-white transition-all">
+          <UserPlus className="h-5 w-5 mr-2" /> Register Member
         </Button>
       </DialogTrigger>
       <DialogContent className={`p-0 border-0 overflow-hidden rounded-2xl shadow-2xl bg-transparent transition-all duration-300 ${
@@ -890,6 +894,103 @@ function RegisterMemberDialog({ onCreated }) {
                   </div>
                 )}
 
+                {/* Notifications Tab */}
+                {subTab === "notifications" && (
+                  <div className="space-y-4">
+                    {/* Family members builder */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center border-b pb-1">
+                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">👨‍👩‍👧‍👦 Family Members</h3>
+                        <Button variant="outline" size="sm" type="button" className="text-orange-600 border-orange-200 hover:bg-orange-50 hover:text-orange-700 font-bold px-3 py-1.5" onClick={() => {
+                          const next = [...form.familyMembers, { id: Date.now(), fullName: "", relationship: "Son", mobile: "" }];
+                          setForm({ ...form, familyMembers: next });
+                        }}>
+                          + Add Member
+                        </Button>
+                      </div>
+                      {form.familyMembers.length === 0 && (
+                        <div className="text-xs text-slate-400 italic">No family members added. Click Add to build linkage.</div>
+                      )}
+                      <div className="space-y-2">
+                        {form.familyMembers.map((m, idx) => (
+                          <div key={m.id || idx} className="grid grid-cols-12 gap-2 items-center bg-white p-2 rounded-lg border border-slate-100">
+                            <div className="col-span-5">
+                              <Input value={m.fullName} onChange={(e) => {
+                                const list = [...form.familyMembers];
+                                list[idx].fullName = e.target.value;
+                                setForm({ ...form, familyMembers: list });
+                              }} placeholder="Full Name" className="h-8 text-xs" />
+                            </div>
+                            <div className="col-span-3">
+                              <SearchableSelect
+                                value={m.relationship}
+                                onValueChange={(v) => {
+                                  const list = [...form.familyMembers];
+                                  list[idx].relationship = v;
+                                  setForm({ ...form, familyMembers: list });
+                                }}
+                                options={toOptions(["Father", "Mother", "Spouse", "Son", "Daughter", "Brother", "Sister"])}
+                                placeholder="Relationship"
+                                className="h-8 text-xs"
+                              />
+                            </div>
+                            <div className="col-span-3">
+                              <Input value={m.mobile} onChange={(e) => {
+                                const list = [...form.familyMembers];
+                                list[idx].mobile = e.target.value;
+                                setForm({ ...form, familyMembers: list });
+                              }} placeholder="Mobile Number" className="h-8 text-xs font-mono" />
+                            </div>
+                            <div className="col-span-1 text-right">
+                              <button type="button" onClick={() => {
+                                const list = form.familyMembers.filter((_, i) => i !== idx);
+                                setForm({ ...form, familyMembers: list });
+                              }} className="text-slate-400 hover:text-red-500 transition-colors">
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Notification Preferences */}
+                    <div className="space-y-2 border-t pt-3">
+                      <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">🔔 Channel Alerts Preferences</h3>
+                      <div className="space-y-2 text-xs">
+                        <div className="p-2.5 bg-white rounded-lg border border-slate-100 flex flex-col gap-2">
+                          <span className="font-semibold text-slate-700 block">Service Alerts (Mandatory)</span>
+                          <div className="flex gap-4">
+                            {["SMS", "WhatsApp", "Email", "Push"].map(c => (
+                              <label key={c} className="flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" checked={form.serviceNotifications.includes(c)} onChange={() => {
+                                  const next = form.serviceNotifications.includes(c) ? form.serviceNotifications.filter(x => x !== c) : [...form.serviceNotifications, c];
+                                  setForm({ ...form, serviceNotifications: next });
+                                }} className="h-3.5 w-3.5 text-orange-500 rounded border-slate-350" />
+                                <span>{c}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="p-2.5 bg-white rounded-lg border border-slate-100 flex flex-col gap-2">
+                          <span className="font-semibold text-slate-700 block">Marketing & Promotional Alerts</span>
+                          <div className="flex gap-4">
+                            {["SMS", "WhatsApp", "Email", "Push"].map(c => (
+                              <label key={c} className="flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" checked={form.marketingNotifications.includes(c)} onChange={() => {
+                                  const next = form.marketingNotifications.includes(c) ? form.marketingNotifications.filter(x => x !== c) : [...form.marketingNotifications, c];
+                                  setForm({ ...form, marketingNotifications: next });
+                                }} className="h-3.5 w-3.5 text-orange-500 rounded border-slate-350" />
+                                <span>{c}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Consent Tab */}
                 {subTab === "consent" && (
                   <div className="space-y-3">
@@ -1071,11 +1172,27 @@ export default function MembersPage() {
     },
     {
       key: "status", header: "Status",
-      render: (r) => <StatusBadge status={r.status || "INACTIVE"} />,
+      render: (r) => (
+        <StatusBadge
+          status={r.isAutoCreated && r.status === "INACTIVE" ? "PENDING_ACTIVATION" : (r.status || "INACTIVE")}
+        />
+      ),
     },
     {
-      key: "dob", header: "DOB",
-      render: (r) => r.dob ? formatDate(r.dob) : "—",
+      key: "actions", header: "Actions",
+      render: (r) => (
+        <Button 
+          size="sm" 
+          variant="outline" 
+          onClick={(e) => {
+            e.stopPropagation();
+            openCard(r);
+          }}
+          className="h-8 text-xs font-semibold border-orange-200 text-orange-600 hover:bg-orange-50"
+        >
+          Edit Profile
+        </Button>
+      ),
     },
   ];
 

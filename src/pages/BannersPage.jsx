@@ -15,7 +15,7 @@ import {
 import { Image as BannerIcon, Plus, ExternalLink, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-const EMPTY_FORM = { title: "", imageUrl: "", redirectUrl: "", displayOrder: "0" };
+const EMPTY_FORM = { title: "", imageUrl: "", deviceType: "MOBILE", redirectUrl: "", displayOrder: "0" };
 
 export default function BannersPage() {
   const [rows, setRows] = useState([]);
@@ -46,10 +46,34 @@ export default function BannersPage() {
     setForm({
       title: row.title,
       imageUrl: row.imageUrl,
+      deviceType: row.deviceType || "MOBILE",
       redirectUrl: row.redirectUrl || "",
       displayOrder: String(row.displayOrder ?? 0),
     });
     setOpenDialog(true);
+  };
+
+  const validateImageRatio = (url, deviceType) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const ratio = img.width / img.height;
+        const expected = deviceType === "DESKTOP" ? 5.0 : 3.0;
+        const tolerance = deviceType === "DESKTOP" ? 0.35 : 0.25;
+        if (Math.abs(ratio - expected) > tolerance) {
+          resolve({
+            valid: false,
+            msg: `Image aspect ratio is ${ratio.toFixed(2)}:1. Expected ~${expected}:1 for ${deviceType}.`
+          });
+        } else {
+          resolve({ valid: true });
+        }
+      };
+      img.onerror = () => {
+        resolve({ valid: true }); // fallback if CORS restricts loading
+      };
+      img.src = url;
+    });
   };
 
   const handleSave = async () => {
@@ -59,9 +83,17 @@ export default function BannersPage() {
     }
     setSaving(true);
     try {
+      const validation = await validateImageRatio(form.imageUrl, form.deviceType || "MOBILE");
+      if (!validation.valid) {
+        toast.error(validation.msg + " Please crop the image or adjust the target device.");
+        setSaving(false);
+        return;
+      }
+
       const payload = {
         title: form.title,
         imageUrl: form.imageUrl,
+        deviceType: form.deviceType || "MOBILE",
         redirectUrl: form.redirectUrl || undefined,
         displayOrder: parseInt(form.displayOrder) || 0,
       };
@@ -111,6 +143,14 @@ export default function BannersPage() {
         <div className="h-10 w-16 bg-slate-100 rounded overflow-hidden">
           <img src={r.imageUrl} alt={r.title} className="h-full w-full object-cover" />
         </div>
+      ),
+    },
+    {
+      key: "deviceType", header: "Target Device",
+      render: (r) => (
+        <Badge variant="outline" className={r.deviceType === "DESKTOP" ? "border-blue-200 text-blue-700 bg-blue-50" : "border-orange-200 text-orange-700 bg-orange-50"}>
+          {r.deviceType || "MOBILE"}
+        </Badge>
       ),
     },
     {
@@ -203,6 +243,25 @@ export default function BannersPage() {
                 placeholder="https://example.com/banner.png"
                 data-testid="banner-imageurl-input"
               />
+            </div>
+            <div>
+              <Label className="text-xs">Target Device / Layout Type *</Label>
+              <select
+                className="w-full mt-1 h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                value={form.deviceType || "MOBILE"}
+                onChange={(e) => setForm({ ...form, deviceType: e.target.value })}
+              >
+                <option value="MOBILE">Mobile App Banner (3:1 Aspect Ratio)</option>
+                <option value="DESKTOP">Web Portal Banner (5:1 Aspect Ratio)</option>
+              </select>
+            </div>
+            <div className="p-3 bg-amber-50 rounded-lg border border-amber-100 space-y-1">
+              <span className="text-xs font-bold text-amber-800 block">📐 Banner Sizing Instructions</span>
+              <p className="text-[11px] text-amber-700 leading-relaxed">
+                {form.deviceType === "DESKTOP" 
+                  ? "Desktop banners require a strict 5:1 aspect ratio constraint (e.g. 1500 x 300 px recommended). Standard limits will enforce ratio validation." 
+                  : "Mobile banners require a strict 3:1 aspect ratio constraint (e.g. 1200 x 400 px recommended). Standard limits will enforce ratio validation."}
+              </p>
             </div>
             <div>
               <Label className="text-xs">Redirect Link / Route</Label>

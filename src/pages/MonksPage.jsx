@@ -27,6 +27,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { toOptions } from "@/constants/dropdownOptions";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDate } from "@/lib/utils";
+import TimePicker, { TimeRangePicker } from "@/components/common/TimePicker";
 
 const SHWETAMBAR_SUB = ["Murtipujak", "Sthanakvasi", "Terapanth"];
 const DIGAMBAR_SUB = ["Bisapantha", "Terapantha", "Taranapantha", "Gumanapantha", "Totapantha", "Kanjipantha", "Other Digambar Traditions"];
@@ -494,6 +495,22 @@ function RegisterMonkDialog({ onCreated }) {
   const [saving, setSaving] = useState(false);
   const [tab, setTab]       = useState("basic");
   const [temples, setTemples] = useState([]);
+
+  const parseRange = (val) => {
+    if (!val) return { from: "", to: "" };
+    const parts = val.split("-").map(s => s.trim());
+    return { from: parts[0] || "", to: parts[1] || "" };
+  };
+
+  const setRangeVal = (key, part, timeStr) => {
+    const current = form[key] || "";
+    const parts = current.split("-").map(s => s.trim());
+    if (part === "from") {
+      setForm(prev => ({ ...prev, [key]: `${timeStr} - ${parts[1] || ""}` }));
+    } else {
+      setForm(prev => ({ ...prev, [key]: `${parts[0] || ""} - ${timeStr}` }));
+    }
+  };
   
   const [form, setForm] = useState({
     dikshaName: "",
@@ -1353,18 +1370,78 @@ function RegisterMonkDialog({ onCreated }) {
                       <div className="border p-3.5 rounded-xl bg-slate-50 space-y-3">
                         <span className="text-xs font-bold text-slate-700 block border-b pb-1">🗣 Pravachan Slots</span>
                         <div className="grid grid-cols-3 gap-3">
-                          {field("Morning Pravachan", "pravachanMorning", "text", "08:30 AM")}
-                          {field("Afternoon Pravachan", "pravachanAfternoon", "text", "03:30 PM")}
-                          {field("Evening Pravachan", "pravachanEvening", "text", "06:15 PM")}
+                          <div>
+                            <Label className="text-xs font-semibold text-slate-600">Morning Pravachan</Label>
+                            <TimePicker 
+                              value={form.pravachanMorning} 
+                              onChange={(val) => setForm(prev => ({ ...prev, pravachanMorning: val }))} 
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold text-slate-600">Afternoon Pravachan</Label>
+                            <TimePicker 
+                              value={form.pravachanAfternoon} 
+                              onChange={(val) => setForm(prev => ({ ...prev, pravachanAfternoon: val }))} 
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold text-slate-600">Evening Pravachan</Label>
+                            <TimePicker 
+                              value={form.pravachanEvening} 
+                              onChange={(val) => setForm(prev => ({ ...prev, pravachanEvening: val }))} 
+                              className="mt-1"
+                            />
+                          </div>
                         </div>
                       </div>
 
                       <div className="border p-3.5 rounded-xl bg-slate-50 space-y-3">
                         <span className="text-xs font-bold text-slate-700 block border-b pb-1">🧘 Darshan & Interaction Slots</span>
-                        <div className="grid grid-cols-3 gap-3">
-                          {field("Morning Interaction", "darshanMorning", "text", "09:00 AM - 11:30 AM")}
-                          {field("Afternoon Interaction", "darshanAfternoon", "text", "04:00 PM - 05:30 PM")}
-                          {field("Evening Interaction", "darshanEvening", "text", "07:30 PM - 08:30 PM")}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div>
+                            <Label className="text-xs font-semibold text-slate-600 mb-1 block">Morning Interaction</Label>
+                            {(() => {
+                              const range = parseRange(form.darshanMorning);
+                              return (
+                                <TimeRangePicker
+                                  fromValue={range.from}
+                                  toValue={range.to}
+                                  onFromChange={(val) => setRangeVal("darshanMorning", "from", val)}
+                                  onToChange={(val) => setRangeVal("darshanMorning", "to", val)}
+                                />
+                              );
+                            })()}
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold text-slate-600 mb-1 block">Afternoon Interaction</Label>
+                            {(() => {
+                              const range = parseRange(form.darshanAfternoon);
+                              return (
+                                <TimeRangePicker
+                                  fromValue={range.from}
+                                  toValue={range.to}
+                                  onFromChange={(val) => setRangeVal("darshanAfternoon", "from", val)}
+                                  onToChange={(val) => setRangeVal("darshanAfternoon", "to", val)}
+                                />
+                              );
+                            })()}
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold text-slate-600 mb-1 block">Evening Interaction</Label>
+                            {(() => {
+                              const range = parseRange(form.darshanEvening);
+                              return (
+                                <TimeRangePicker
+                                  fromValue={range.from}
+                                  toValue={range.to}
+                                  onFromChange={(val) => setRangeVal("darshanEvening", "from", val)}
+                                  onToChange={(val) => setRangeVal("darshanEvening", "to", val)}
+                                />
+                              );
+                            })()}
+                          </div>
                         </div>
                       </div>
 
@@ -1377,10 +1454,29 @@ function RegisterMonkDialog({ onCreated }) {
 
                       <div className="grid grid-cols-2 gap-3 border-t pt-3">
                         <div>
-                          <Label className="text-xs font-semibold">Languages Spoken (comma-separated)</Label>
-                          <Input className="mt-1 h-9 bg-white" placeholder="Hindi, Gujarati, Marwari"
-                            value={form.languagesSpoken.join(", ")}
-                            onChange={(e) => setForm({ ...form, languagesSpoken: e.target.value.split(",").map(x => x.trim()) })} />
+                          <Label className="text-xs font-semibold block mb-1.5">Languages Spoken</Label>
+                          <div className="grid grid-cols-3 gap-2 p-2 border rounded-lg bg-white">
+                            {["Hindi", "Gujarati", "Marwari", "Sanskrit", "Prakrit", "English"].map((lang) => {
+                              const checked = (form.languagesSpoken || []).includes(lang);
+                              return (
+                                <label key={lang} className="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer select-none">
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={(e) => {
+                                      const current = form.languagesSpoken || [];
+                                      const next = e.target.checked
+                                        ? [...current, lang]
+                                        : current.filter(l => l !== lang);
+                                      setForm({ ...form, languagesSpoken: next });
+                                    }}
+                                    className="rounded border-slate-300 text-orange-500 focus:ring-orange-500 h-3.5 w-3.5"
+                                  />
+                                  <span>{lang}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
                         </div>
                         <div>
                           <Label className="text-xs font-semibold">Health & Darshan status</Label>

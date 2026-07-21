@@ -17,8 +17,6 @@ import VisitorsPage from "@/pages/VisitorsPage";
 import BookingsPage from "@/pages/BookingsPage";
 import DonationsPage from "@/pages/DonationsPage";
 import EventsPage from "@/pages/EventsPage";
-import TicketsPage from "@/pages/TicketsPage";
-import SeatingPage from "@/pages/SeatingPage";
 import ToursPage from "@/pages/ToursPage";
 import FeedPage from "@/pages/FeedPage";
 import OffersPage from "@/pages/OffersPage";
@@ -31,7 +29,6 @@ import CountersPage from "@/pages/CountersPage";
 import TrackingPage from "@/pages/TrackingPage";
 import DevicesPage from "@/pages/DevicesPage";
 import AlertsPage from "@/pages/AlertsPage";
-import CommunicationPage from "@/pages/CommunicationPage";
 import AnnouncementsPage from "@/pages/AnnouncementsPage";
 import GalleryPage from "@/pages/GalleryPage";
 import VolunteersPage from "@/pages/VolunteersPage";
@@ -44,11 +41,8 @@ import AuditLogsPage from "@/pages/AuditLogsPage";
 import MasterDataPage from "@/pages/MasterDataPage";
 import BulkImportPage from "@/pages/BulkImportPage";
 import TourJatraPage from "@/pages/TourJatraPage";
-
-// New modules imports per client Super Admin spec
 import NonJainMembersPage from "@/pages/NonJainMembersPage";
 import StanaksPage from "@/pages/StanaksPage";
-import UpashraysPage from "@/pages/UpashraysPage";
 import ChaturmasPage from "@/pages/ChaturmasPage";
 import ReceiptsPage from "@/pages/ReceiptsPage";
 import MSTrackingPage from "@/pages/MSTrackingPage";
@@ -68,6 +62,9 @@ import DonationReportsPage from "@/pages/DonationReportsPage";
 import EventsReportsPage from "@/pages/EventsReportsPage";
 import FeedAnalyticsPage from "@/pages/FeedAnalyticsPage";
 import AppUsagePage from "@/pages/AppUsagePage";
+import BookingCalendarPage from "@/pages/BookingCalendarPage";
+import SADashboardPage from "@/pages/SADashboardPage";
+import ComingSoonPage from "@/pages/ComingSoonPage";
 
 function App() {
   return (
@@ -85,14 +82,45 @@ function App() {
               </ProtectedRoute>
             }
           >
+            {/* ─── Dashboards ─────────────────────────────────────── */}
             <Route index element={<DashboardPage />} />
+            <Route path="sa-dashboard" element={<SADashboardPage />} />
 
+            {/* ─── People: Members ────────────────────────────────── */}
             <Route path="members" element={<MembersPage />} />
+            <Route path="members/bulk-import" element={<BulkImportPage />} />
             <Route path="non-jain-members" element={<NonJainMembersPage />} />
             <Route path="family" element={<FamilyPage />} />
+            <Route path="people/member-requests" element={<ComingSoonPage moduleName="Member Requests" />} />
+            <Route path="people/member-verification" element={<ComingSoonPage moduleName="Member Verification" />} />
+            <Route path="people/family-groups" element={<ComingSoonPage moduleName="Family Groups" />} />
+            <Route path="people/export-members" element={<ComingSoonPage moduleName="Export Members" />} />
+
+            {/* ─── People: Volunteers ─────────────────────────────── */}
+            <Route path="volunteers" element={<VolunteersPage />} />
+            <Route path="people/volunteer-registration" element={<ComingSoonPage moduleName="Volunteer Registration" />} />
+            <Route path="people/volunteer-assignment" element={<ComingSoonPage moduleName="Volunteer Assignment" />} />
+            <Route path="people/volunteer-attendance" element={<ComingSoonPage moduleName="Volunteer Attendance" />} />
+            <Route path="people/volunteer-reports" element={<ComingSoonPage moduleName="Volunteer Reports" />} />
+
+            {/* ─── People: MS Management ──────────────────────────── */}
             <Route path="monks" element={<MonksPage />} />
             <Route path="monks/:id" element={<MonkDetailPage />} />
+            <Route path="ms/guru-hierarchy" element={<ComingSoonPage moduleName="Guru Hierarchy" />} />
+            <Route path="ms/groups" element={<ComingSoonPage moduleName="MS Groups" />} />
+            <Route path="ms/ms-associations" element={<ComingSoonPage moduleName="MS Associations" />} />
+            <Route path="ms/route-planning" element={<ComingSoonPage moduleName="Route Planning" />} />
 
+            {/* ─── People: Staff ──────────────────────────────────── */}
+            <Route path="staff" element={<StaffPage />} />
+
+            {/* ─── People: Committee ──────────────────────────────── */}
+            <Route path="people/committee" element={<ComingSoonPage moduleName="Committee" />} />
+            <Route path="people/committee/members" element={<ComingSoonPage moduleName="Committee Members" />} />
+            <Route path="people/committee/designations" element={<ComingSoonPage moduleName="Committee Designations" />} />
+            <Route path="people/committee/directory" element={<ComingSoonPage moduleName="Contact Directory" />} />
+
+            {/* ─── Organizations ──────────────────────────────────── */}
             <Route
               path="temples"
               element={
@@ -116,7 +144,6 @@ function App() {
                 />
               }
             />
-
             <Route
               path="dharamshalas"
               element={
@@ -140,15 +167,14 @@ function App() {
                 />
               }
             />
-
             <Route
               path="jain-centers"
               element={
                 <OrgListPage
                   endpoint="/jain-centers"
                   entity="jain-center"
-                  label="Jain Center"
-                  pluralLabel="Jain Centers"
+                  label="Jain Centre"
+                  pluralLabel="Jain Centres"
                   moduleKey="JAIN_CENTERS"
                   testId="jain-centers-page"
                 />
@@ -159,49 +185,45 @@ function App() {
               element={
                 <OrgDetailPage
                   basePath="/jain-centers"
-                  entityLabel="Jain Center"
+                  entityLabel="Jain Centre"
                   apiPrefix="/jain-centers"
                 />
               }
             />
+            <Route path="stanaks" element={<StanaksPage />} />
+            <Route path="bhojanshala" element={<ComingSoonPage moduleName="Bhojanshala Management" />} />
+            <Route path="community-pages" element={<CommunityPagesPage />} />
 
-            <Route
-              path="stanaks"
-              element={
-                <StanaksPage />
-              }
-            />
-            <Route
-              path="upashrays"
-              element={
-                <UpashraysPage />
-              }
-            />
+            {/* ─── Community ──────────────────────────────────────── */}
+            <Route path="feed" element={<FeedPage />} />
+            <Route path="events" element={<EventsPage />} />
+            <Route path="news" element={<NewsPage />} />
+            <Route path="announcements" element={<AnnouncementsPage />} />
+            <Route path="polls" element={<PollsPage />} />
+            <Route path="tours" element={<ToursPage />} />
+            <Route path="tour-jatra" element={<TourJatraPage />} />
+            <Route path="tours/:tourId/participants/:participantId" element={<TourJatraPage />} />
+            <Route path="chaturmas" element={<ChaturmasPage />} />
+            <Route path="counters" element={<CountersPage />} />
+            <Route path="calendar" element={<CalendarPage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
+            <Route path="notifications/preferences" element={<NotificationPreferencesPage />} />
+            <Route path="varshitap" element={<ComingSoonPage moduleName="Varshitap Management" />} />
 
-            <Route path="staff" element={<StaffPage />} />
-            <Route path="visitors" element={<VisitorsPage />} />
-            
+            {/* ─── Bookings ───────────────────────────────────────── */}
             <Route path="bookings" element={<BookingsPage />} />
-            
+            <Route path="booking-calendar" element={<BookingCalendarPage />} />
+
+            {/* ─── Finance ────────────────────────────────────────── */}
             <Route path="donations" element={<DonationsPage />} />
             <Route path="receipts" element={<ReceiptsPage />} />
-            
-            <Route path="events" element={<EventsPage />} />
-            <Route path="tickets" element={<TicketsPage />} />
-            <Route path="seating" element={<SeatingPage />} />
-            
-            <Route path="tours" element={<ToursPage />} />
-            <Route path="chaturmas" element={<ChaturmasPage />} />
-            
-            <Route path="feed" element={<FeedPage />} />
             <Route path="offers" element={<OffersPage />} />
             <Route path="ads" element={<AdsPage />} />
-            <Route path="news" element={<NewsPage />} />
-            <Route path="community-pages" element={<CommunityPagesPage />} />
-            <Route path="polls" element={<PollsPage />} />
-            <Route path="calendar" element={<CalendarPage />} />
-            <Route path="counters" element={<CountersPage />} />
-            
+            <Route path="sponsors" element={<ComingSoonPage moduleName="Sponsors" />} />
+            <Route path="finance/partner-businesses" element={<ComingSoonPage moduleName="Partner Businesses" />} />
+
+            {/* ─── Operations ─────────────────────────────────────── */}
+            <Route path="visitors" element={<VisitorsPage />} />
             <Route path="ms-tracking" element={<MSTrackingPage />} />
             <Route path="tracking" element={<TrackingPage />} />
             <Route path="manual-tracking" element={<ManualTrackingPage />} />
@@ -210,36 +232,38 @@ function App() {
             <Route path="live-map" element={<LiveMapPage />} />
             <Route path="devices" element={<DevicesPage />} />
             <Route path="alerts" element={<AlertsPage />} />
-            
-            <Route path="communication" element={<CommunicationPage />} />
-            <Route path="announcements" element={<AnnouncementsPage />} />
-            
-            <Route path="gallery" element={<GalleryPage />} />
-            <Route path="faq" element={<FaqPage />} />
-            <Route path="banners" element={<BannersPage />} />
-            <Route path="home-sections" element={<HomeSectionsPage />} />
-            
-            <Route path="volunteers" element={<VolunteersPage />} />
-            <Route path="support-tickets" element={<SupportTicketsPage />} />
-            <Route path="feedback" element={<FeedbackPage />} />
-            <Route path="incorrect-reports" element={<IncorrectReportsPage />} />
-            <Route path="notifications" element={<NotificationsPage />} />
-            <Route path="notifications/preferences" element={<NotificationPreferencesPage />} />
-            
+            <Route path="operations/documents" element={<ComingSoonPage moduleName="Document Management" />} />
+            <Route path="operations/tasks" element={<ComingSoonPage moduleName="Task Management" />} />
+            <Route path="operations/chaturmas-tracking" element={<ComingSoonPage moduleName="Chaturmas Tracking" />} />
+            <Route path="attendance" element={<ComingSoonPage moduleName="Attendance" />} />
+
+            {/* ─── Reports & Analytics ────────────────────────────── */}
             <Route path="reports" element={<ReportsPage />} />
             <Route path="reports/members" element={<MemberReportsPage />} />
             <Route path="reports/donations" element={<DonationReportsPage />} />
             <Route path="reports/events" element={<EventsReportsPage />} />
             <Route path="reports/feed-analytics" element={<FeedAnalyticsPage />} />
             <Route path="reports/app-usage" element={<AppUsagePage />} />
-            
-            <Route path="subscription-plans" element={<SubscriptionPlansPage />} />
-            <Route path="admins" element={<AdminsPage />} />
+
+            {/* ─── Support ────────────────────────────────────────── */}
+            <Route path="support-tickets" element={<SupportTicketsPage />} />
+            <Route path="feedback" element={<FeedbackPage />} />
+            <Route path="incorrect-reports" element={<IncorrectReportsPage />} />
+            <Route path="support/callback-requests" element={<ComingSoonPage moduleName="Callback Requests" />} />
+            <Route path="faq" element={<FaqPage />} />
+
+            {/* ─── Settings ───────────────────────────────────────── */}
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="settings/payment-settings" element={<ComingSoonPage moduleName="Payment Settings" />} />
+            <Route path="admins" element={<AdminsPage />} />
             <Route path="audit-logs" element={<AuditLogsPage />} />
             <Route path="master-data" element={<MasterDataPage />} />
-            <Route path="members/bulk-import" element={<BulkImportPage />} />
-            <Route path="tours/:tourId/participants/:participantId" element={<TourJatraPage />} />
+            <Route path="subscription-plans" element={<SubscriptionPlansPage />} />
+
+            {/* ─── Content Management (SA) ────────────────────────── */}
+            <Route path="gallery" element={<GalleryPage />} />
+            <Route path="banners" element={<BannersPage />} />
+            <Route path="home-sections" element={<HomeSectionsPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

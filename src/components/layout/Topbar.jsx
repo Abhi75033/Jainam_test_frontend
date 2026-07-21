@@ -4,6 +4,7 @@ import { useSocket } from "@/hooks/useSocket";
 import { Search, Bell, LogOut, User as UserIcon, Menu, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { api } from "@/lib/api";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +22,9 @@ export default function Topbar({ onToggleSidebar }) {
   const { user, logout, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const [activeAdmins, setActiveAdmins] = useState(1);
+  const [templeSearch, setTempleSearch] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [showResults, setShowResults] = useState(false);
 
   const { socket, connected } = useSocket(
     "/dashboards",
@@ -40,6 +44,22 @@ export default function Topbar({ onToggleSidebar }) {
     }
   }, [connected, socket, isSuperAdmin]);
 
+  useEffect(() => {
+    if (!templeSearch.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    const delayDebounce = setTimeout(() => {
+      api.get(`/temples?q=${templeSearch}`)
+        .then((res) => {
+          const list = res.data?.data?.items || res.data?.data || [];
+          setSearchResults(list);
+        })
+        .catch(() => {});
+    }, 300);
+    return () => clearTimeout(delayDebounce);
+  }, [templeSearch]);
+
   const name =
     [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
     user?.mobile ||
@@ -47,15 +67,59 @@ export default function Topbar({ onToggleSidebar }) {
 
   return (
     <header className="sticky top-0 z-30 h-16 md:h-20 bg-white border-b border-border flex items-center px-3 md:px-6 gap-2 md:gap-3">
+      {/* Hamburger — mobile only triggers sheet, desktop is decorative brand */}
       <Button
         variant="ghost"
         size="icon"
-        className="md:hidden shrink-0"
+        className="shrink-0"
         onClick={onToggleSidebar}
         data-testid="topbar-menu-button"
       >
         <Menu className="h-5 w-5" />
       </Button>
+
+      {/* Prominent Admin Greeting */}
+      <div className="hidden sm:flex flex-col ml-2 leading-none shrink-0">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">System Control</span>
+        <span className="text-sm font-black text-slate-800 mt-0.5">Welcome, {name}</span>
+      </div>
+
+      {/* Global search bar for active temples */}
+      <div className="relative hidden md:block max-w-xs w-full ml-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Input
+            value={templeSearch}
+            onChange={(e) => {
+              setTempleSearch(e.target.value);
+              setShowResults(true);
+            }}
+            onFocus={() => setShowResults(true)}
+            onBlur={() => setTimeout(() => setShowResults(false), 200)}
+            placeholder="Search active temples..."
+            className="pl-9 text-xs h-9 bg-slate-50 border-slate-200 rounded-lg w-full focus:bg-white transition-all"
+          />
+        </div>
+
+        {showResults && searchResults.length > 0 && (
+          <div className="absolute top-10 left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto p-1 space-y-0.5">
+            {searchResults.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => {
+                  navigate(`/temples/${t.id}`);
+                  setTempleSearch("");
+                }}
+                className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 rounded-md font-medium text-slate-700 flex flex-col"
+              >
+                <span className="font-bold">{t.name}</span>
+                <span className="text-[10px] text-slate-400 mt-0.5">{t.city || 'India'}{t.state ? `, ${t.state}` : ""}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
 
       <div className="flex items-center gap-2 md:gap-3 ml-auto shrink-0">
         {/* Active users chip - hidden on mobile */}
