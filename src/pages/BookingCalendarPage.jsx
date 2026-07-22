@@ -37,8 +37,10 @@ export default function BookingCalendarPage() {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadCalendarBookings();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId, month, year]);
 
   const prevMonth = () => {

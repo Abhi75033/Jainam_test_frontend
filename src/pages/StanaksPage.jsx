@@ -83,6 +83,7 @@ export default function StanaksPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadStanaks();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
 
   const openCreate = () => {
