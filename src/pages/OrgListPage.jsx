@@ -7,7 +7,7 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, MapPin, Trash2, X, CheckCircle, Coffee, Shield } from "lucide-react";
+import { Search, Plus, MapPin, Trash2, X, CheckCircle, Coffee, Shield, Building2 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -359,7 +359,7 @@ export default function OrgListPage({
               onError={(e) => { e.target.style.display = 'none'; }}
             />
           ) : (
-            <MapPin className="h-4 w-4 text-primary/65" />
+            <Building2 className="h-5 w-5 text-primary/65" />
           )}
         </div>
       ),

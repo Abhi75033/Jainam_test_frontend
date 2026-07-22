@@ -3,8 +3,11 @@ import { api, extractErrorMessage, API_BASE } from "@/lib/api";
 import { PageHeader } from "@/components/common/PageHeader";
 import { DataTable } from "@/components/common/DataTable";
 import { StatusBadge } from "@/components/common/StatusBadge";
-import { Badge } from "@/components/ui/badge";
+import { StatCard } from "@/components/common/StatCard";
+import { QrScanner } from "@/components/common/QrScanner";
+import { QRCodeCanvas } from "qrcode.react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -35,10 +38,18 @@ import {
   Compass,
   ArrowRightLeft,
   Building,
-  DollarSign
+  DollarSign,
+  ScanLine,
+  Ticket,
+  CheckCircle2,
+  XCircle,
+  Armchair,
+  Lock,
+  LockOpen,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
-import { formatDate, formatDateTime, formatCurrency } from "@/lib/utils";
+import { formatDate, formatDateTime, formatCurrency, cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrgs } from "@/hooks/useOrgs";
 import { OrgSelect } from "@/components/common/OrgSelect";
@@ -121,6 +132,23 @@ export default function EventsPage() {
   const [ticketQrCode, setTicketQrCode] = useState("");
   const [scanning, setScanning] = useState(false);
 
+  // === TICKETS TAB STATES ===
+  const [ticketsRows, setTicketsRows] = useState([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [ticketsScanOpen, setTicketsScanOpen] = useState(false);
+  const [detailTicket, setDetailTicket] = useState(null);
+  const [ticketsReload, setTicketsReload] = useState(0);
+
+  // === SEATING TAB STATES ===
+  const [seatingEvents, setSeatingEvents] = useState([]);
+  const [seatingEventId, setSeatingEventId] = useState("");
+  const [seatingMap, setSeatingMap] = useState({ sections: [] });
+  const [seatingLoading, setSeatingLoading] = useState(false);
+  const [seatingSaving, setSeatingSaving] = useState(false);
+  const [newSection, setNewSection] = useState({ name: "", mode: "OPEN" });
+  const [newRow, setNewRow] = useState({ sectionId: "", label: "" });
+  const [newSeats, setNewSeats] = useState({ rowId: "", count: "" });
+
   const loadData = async () => {
     if (!orgId) { setLoading(false); return; }
     setLoading(true);
@@ -156,6 +184,99 @@ export default function EventsPage() {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId, reloadKey]);
+
+  // === TICKETS TAB LOGIC ===
+  useEffect(() => {
+    if (activeTab !== "tickets") return;
+    setTicketsLoading(true);
+    api.get("/tickets/my")
+      .then((res) => setTicketsRows(res.data?.data?.items || res.data?.data || []))
+      .catch(() => setTicketsRows([]))
+      .finally(() => setTicketsLoading(false));
+  }, [activeTab, ticketsReload]);
+
+  const handleTicketScan = async (qrText) => {
+    setTicketsScanOpen(false);
+    try {
+      const { data } = await api.post("/tickets/scan", { qrToken: qrText });
+      toast.success(`Checked in: ${data?.data?.publicId || "ticket"}`);
+      setTicketsReload((k) => k + 1);
+    } catch (e) {
+      toast.error(extractErrorMessage(e));
+    }
+  };
+
+  // === SEATING TAB LOGIC ===
+  useEffect(() => {
+    if (activeTab !== "seating") return;
+    api.get("/events", { params: { isPaid: true } })
+      .then((res) => setSeatingEvents(res.data?.data?.items || res.data?.data || []))
+      .catch(() => setSeatingEvents([]));
+  }, [activeTab]);
+
+  const loadSeatingMap = async (id) => {
+    if (!id) return;
+    setSeatingLoading(true);
+    try {
+      const res = await api.get(`/seating/event/${id}`);
+      setSeatingMap(res.data?.data || { sections: [] });
+    } catch {
+      setSeatingMap({ sections: [] });
+    } finally {
+      setSeatingLoading(false);
+    }
+  };
+
+  useEffect(() => { if (seatingEventId) loadSeatingMap(seatingEventId); }, [seatingEventId]);
+
+  const addSeatingSection = async () => {
+    if (!newSection.name || !seatingEventId) return;
+    setSeatingSaving(true);
+    try {
+      await api.post("/seating/sections", { eventId: seatingEventId, name: newSection.name, mode: newSection.mode });
+      toast.success("Section added.");
+      setNewSection({ name: "", mode: "OPEN" });
+      loadSeatingMap(seatingEventId);
+    } catch (err) {
+      toast.error(extractErrorMessage(err));
+    } finally { setSeatingSaving(false); }
+  };
+
+  const addSeatingRow = async () => {
+    if (!newRow.sectionId || !newRow.label) return;
+    setSeatingSaving(true);
+    try {
+      await api.post(`/seating/sections/${newRow.sectionId}/rows`, { label: newRow.label });
+      toast.success("Row added.");
+      setNewRow({ sectionId: "", label: "" });
+      loadSeatingMap(seatingEventId);
+    } catch (err) { toast.error(extractErrorMessage(err)); }
+    finally { setSeatingSaving(false); }
+  };
+
+  const addSeatingSeats = async () => {
+    const count = Number(newSeats.count);
+    if (!newSeats.rowId || !count) return;
+    setSeatingSaving(true);
+    try {
+      await api.post(`/seating/rows/${newSeats.rowId}/seats`, { count });
+      toast.success(`${count} seats added.`);
+      setNewSeats({ rowId: "", count: "" });
+      loadSeatingMap(seatingEventId);
+    } catch (err) { toast.error(extractErrorMessage(err)); }
+    finally { setSeatingSaving(false); }
+  };
+
+  const toggleSeatLock = async (seat) => {
+    try {
+      const isLocked = seat.status === "LOCKED";
+      await api.post(`/seating/seats/${seat.id}/${isLocked ? "release" : "lock"}`);
+      toast.success(isLocked ? "Seat released" : "Seat locked");
+      loadSeatingMap(seatingEventId);
+    } catch (err) { toast.error(extractErrorMessage(err)); }
+  };
+
+  const seatingAllRows = (seatingMap.sections || []).flatMap((s) => (s.rows || []).map((r) => ({ ...r, sectionName: s.name })));
 
   const handleCreateEvent = async (e) => {
     e.preventDefault();
@@ -387,6 +508,8 @@ export default function EventsPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-4 bg-slate-100 p-1 rounded-xl">
           <TabsTrigger value="admin_events" className="px-5 py-2 font-bold text-xs rounded-lg">🛡️ Admin Control Ledger ({rows.length})</TabsTrigger>
+          <TabsTrigger value="tickets" className="px-5 py-2 font-bold text-xs rounded-lg">🎟️ Tickets ({ticketsRows.length})</TabsTrigger>
+          <TabsTrigger value="seating" className="px-5 py-2 font-bold text-xs rounded-lg">🪑 Seating Maps</TabsTrigger>
         </TabsList>
 
         {/* Tab 1: Admin Control Grid & Dashboards */}
@@ -446,7 +569,200 @@ export default function EventsPage() {
             />
           </Card>
         </TabsContent>
+
+        {/* Tab 2: Tickets */}
+        <TabsContent value="tickets" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="font-bold text-sm text-slate-800">🎟️ Paid Event Tickets</h3>
+              <p className="text-[11px] text-slate-400">Purchased tickets with QR check-in support.</p>
+            </div>
+            <Button onClick={() => setTicketsScanOpen(true)} className="bg-orange-600 hover:bg-orange-700 text-white font-bold" data-testid="tickets-scan-button">
+              <ScanLine className="h-4 w-4 mr-2" /> Scan QR
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard label="Total Tickets" value={ticketsRows.length} icon={Ticket} tone="blue" testId="stat-tickets-total" />
+            <StatCard label="Active" value={ticketsRows.filter(r => r.status === "TICKET_GENERATED" || r.status === "PAYMENT_SUCCESSFUL").length} icon={Users} tone="green" testId="stat-tickets-active" />
+            <StatCard label="Checked In" value={ticketsRows.filter(r => r.status === "CHECKED_IN").length} icon={CheckCircle2} tone="green" testId="stat-tickets-in" />
+            <StatCard label="Cancelled" value={ticketsRows.filter(r => r.status === "CANCELLED").length} icon={XCircle} tone="red" testId="stat-tickets-cancelled" />
+          </div>
+
+          <DataTable
+            columns={[
+              { key: "publicId", header: "Ticket ID", width: 130, render: (r) => (
+                <button onClick={() => setDetailTicket(r)} className="font-mono text-[10px] text-primary hover:underline" data-testid={`ticket-open-${r.id || r.publicId}`}>
+                  <Badge variant="outline" className="font-mono text-[10px]">{r.publicId || "—"}</Badge>
+                </button>
+              )},
+              { key: "event", header: "Event", render: (r) => r.event?.title || "—" },
+              { key: "category", header: "Category", render: (r) => r.category?.name || "—" },
+              { key: "holder", header: "Holder", render: (r) => r.holder?.mobile || r.buyerMobile || "—" },
+              { key: "amount", header: "Amount", render: (r) => `₹${r.amount ?? 0}` },
+              { key: "purchasedAt", header: "Purchased", render: (r) => formatDateTime(r.purchasedAt || r.createdAt) },
+              { key: "status", header: "Status", render: (r) => <StatusBadge status={r.status || "PENDING_PAYMENT"} /> },
+            ]}
+            rows={ticketsRows}
+            loading={ticketsLoading}
+            testId="tickets-table"
+            emptyTitle="No tickets yet"
+            emptyDescription="Purchased tickets will appear here."
+          />
+
+          {ticketsScanOpen && <QrScanner onScan={handleTicketScan} onClose={() => setTicketsScanOpen(false)} />}
+
+          <Dialog open={Boolean(detailTicket)} onOpenChange={() => setDetailTicket(null)}>
+            <DialogContent className="max-w-sm" data-testid="ticket-detail-dialog">
+              <DialogHeader>
+                <DialogTitle>Ticket · {detailTicket?.publicId}</DialogTitle>
+              </DialogHeader>
+              {detailTicket && (
+                <div className="flex flex-col items-center gap-3">
+                  <div className="text-sm font-semibold">{detailTicket.event?.title || "Event"}</div>
+                  <div className="text-xs text-muted-foreground">{detailTicket.category?.name}</div>
+                  <div className="rounded-lg border border-border p-4 bg-white">
+                    <QRCodeCanvas
+                      value={detailTicket.qrPayload || detailTicket.publicId || String(detailTicket.id || "")}
+                      size={200} level="H" includeMargin
+                    />
+                  </div>
+                  <StatusBadge status={detailTicket.status || "TICKET_GENERATED"} />
+                  <div className="text-[11px] text-muted-foreground">Show this QR at the venue for check-in.</div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+
+        {/* Tab 3: Seating Maps */}
+        <TabsContent value="seating" className="space-y-6">
+          <div>
+            <h3 className="font-bold text-sm text-slate-800">🪑 Seating Map Builder</h3>
+            <p className="text-[11px] text-slate-400">Build seat maps for paid events. Sections → Rows → Seats.</p>
+          </div>
+
+          <Card className="p-4 rounded-xl border-border">
+            <Label className="text-xs">Select Paid Event</Label>
+            <SearchableSelect
+              value={seatingEventId}
+              onValueChange={setSeatingEventId}
+              options={seatingEvents.map((e) => ({ value: e.id, label: e.title }))}
+              placeholder="Select a paid event"
+              searchPlaceholder="Search events…"
+              className="mt-1 max-w-md"
+            />
+          </Card>
+
+          {!seatingEventId ? (
+            <div className="text-center py-12 text-slate-400">
+              <Armchair className="h-10 w-10 mx-auto mb-3 opacity-40" />
+              <p className="text-sm font-semibold">Select a paid event above to configure its seat map.</p>
+            </div>
+          ) : seatingLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Loading map…
+            </div>
+          ) : (
+            <>
+              {/* Builder controls */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <Card className="p-4 rounded-xl border-border">
+                  <div className="text-xs uppercase tracking-widest text-muted-foreground font-semibold mb-2">Add Section</div>
+                  <div className="space-y-2">
+                    <Input placeholder="e.g. VIP" value={newSection.name} onChange={(e) => setNewSection({ ...newSection, name: e.target.value })} data-testid="section-name-input" />
+                    <SearchableSelect
+                      value={newSection.mode}
+                      onValueChange={(v) => setNewSection({ ...newSection, mode: v })}
+                      options={[{ value: "OPEN", label: "Open seating" }, { value: "RESERVED", label: "Reserved seating" }]}
+                      placeholder="Mode"
+                    />
+                    <Button onClick={addSeatingSection} disabled={seatingSaving} className="w-full" data-testid="section-add-btn">
+                      <Plus className="h-3 w-3 mr-1" /> Add Section
+                    </Button>
+                  </div>
+                </Card>
+                <Card className="p-4 rounded-xl border-border">
+                  <div className="text-xs uppercase tracking-widest text-muted-foreground font-semibold mb-2">Add Row</div>
+                  <div className="space-y-2">
+                    <SearchableSelect
+                      value={newRow.sectionId}
+                      onValueChange={(v) => setNewRow({ ...newRow, sectionId: v })}
+                      options={(seatingMap.sections || []).map((s) => ({ value: s.id, label: s.name }))}
+                      placeholder="Section"
+                      searchPlaceholder="Search sections…"
+                    />
+                    <Input placeholder="Row label (e.g. A)" value={newRow.label} onChange={(e) => setNewRow({ ...newRow, label: e.target.value })} data-testid="row-label-input" />
+                    <Button onClick={addSeatingRow} disabled={seatingSaving} className="w-full" data-testid="row-add-btn">
+                      <Plus className="h-3 w-3 mr-1" /> Add Row
+                    </Button>
+                  </div>
+                </Card>
+                <Card className="p-4 rounded-xl border-border">
+                  <div className="text-xs uppercase tracking-widest text-muted-foreground font-semibold mb-2">Add Seats</div>
+                  <div className="space-y-2">
+                    <SearchableSelect
+                      value={newSeats.rowId}
+                      onValueChange={(v) => setNewSeats({ ...newSeats, rowId: v })}
+                      options={seatingAllRows.map((r) => ({ value: r.id, label: `${r.sectionName} · ${r.label}` }))}
+                      placeholder="Row"
+                      searchPlaceholder="Search rows…"
+                    />
+                    <Input type="number" min="1" placeholder="Number of seats" value={newSeats.count} onChange={(e) => setNewSeats({ ...newSeats, count: e.target.value })} data-testid="seats-count-input" />
+                    <Button onClick={addSeatingSeats} disabled={seatingSaving} className="w-full" data-testid="seats-add-btn">
+                      <Plus className="h-3 w-3 mr-1" /> Add Seats
+                    </Button>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Map visualization */}
+              <div className="space-y-6">
+                {(seatingMap.sections || []).length === 0 ? (
+                  <div className="text-center py-10 text-slate-400 border border-dashed rounded-xl">
+                    <Armchair className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                    <p className="text-xs">No sections yet. Add your first section to build the seat map.</p>
+                  </div>
+                ) : (
+                  (seatingMap.sections || []).map((s) => (
+                    <Card key={s.id} className="p-5 rounded-xl border-border" data-testid={`section-${s.id}`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-heading font-semibold">{s.name}</h3>
+                        <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{s.mode || "OPEN"}</span>
+                      </div>
+                      <div className="space-y-3">
+                        {(s.rows || []).map((r) => (
+                          <div key={r.id} className="flex items-center gap-2">
+                            <div className="w-8 text-xs text-muted-foreground font-semibold">{r.label}</div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {(r.seats || []).map((seat) => (
+                                <button
+                                  key={seat.id}
+                                  onClick={() => toggleSeatLock(seat)}
+                                  className={cn(
+                                    "h-8 w-8 rounded-md text-[10px] font-semibold border transition-all",
+                                    seat.status === "BOOKED" && "bg-red-100 text-red-700 border-red-200 cursor-not-allowed",
+                                    seat.status === "LOCKED" && "bg-amber-100 text-amber-700 border-amber-300",
+                                    seat.status === "AVAILABLE" && "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100",
+                                    !seat.status && "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                                  )}
+                                >
+                                  {seat.status === "BOOKED" ? "✕" : seat.status === "LOCKED" ? <Lock className="h-3 w-3 mx-auto" /> : seat.number ?? "○"}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+        </TabsContent>
       </Tabs>
+
 
       {/* Onboard Event Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

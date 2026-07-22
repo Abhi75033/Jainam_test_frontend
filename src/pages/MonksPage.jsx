@@ -865,7 +865,7 @@ function RegisterMonkDialog({ onCreated }) {
     { id: "hierarchy", label: "🌳 Guru Parampara" },
     { id: "group", label: "👥 Vihaar Group" },
     { id: "family", label: "🏠 Family Details" },
-    { id: "tapasya", label: "🪷 timeline & Tapasya" },
+    { id: "tapasya", label: "🪷 Tapasya" },
     { id: "movement", label: "📍 Location & Chaturmas" },
     { id: "routine", label: "🕒 Routine & Guidelines" },
     { id: "contacts", label: "📞 representatives" },
@@ -1299,54 +1299,33 @@ function RegisterMonkDialog({ onCreated }) {
                         ))}
                       </div>
 
-                      {/* Chaturmas History List */}
+                      {/* Chaturmas History List (Read-Only) */}
                       <div className="border p-3.5 rounded-xl bg-slate-50 space-y-3">
                         <div className="flex justify-between items-center border-b pb-1">
-                          <span className="text-xs font-bold text-slate-700">🍁 Chaturmas History (Year-Wise)</span>
-                          <Button type="button" size="sm" variant="outline" onClick={addChaturmasHistory} className="h-6 text-[10px] font-bold">
-                            + Add Chaturmas Year
-                          </Button>
+                          <span className="text-xs font-bold text-slate-700">🍁 Chaturmas History (Auto-populated from Community)</span>
                         </div>
-                        {(form.chaturmasHistory || []).map((c, idx) => (
-                          <div key={idx} className="border p-3 rounded-lg bg-white space-y-2.5 relative shadow-sm">
-                            <button type="button" onClick={() => removeChaturmasHistory(idx)} className="absolute top-2 right-2 text-slate-400 hover:text-red-500">
-                              <X className="h-4 w-4" />
-                            </button>
-                            <div className="grid grid-cols-3 gap-2">
-                              <div>
-                                <Label className="text-[10px] font-bold">Year</Label>
-                                <Input className="h-8 mt-0.5" value={c.year} onChange={(e) => updateChaturmasHistory(idx, "year", e.target.value)} placeholder="e.g. 2026" />
-                              </div>
-                              <div>
-                                <Label className="text-[10px] font-bold">City</Label>
-                                <Input className="h-8 mt-0.5" value={c.city} onChange={(e) => updateChaturmasHistory(idx, "city", e.target.value)} />
-                              </div>
-                              <div>
-                                <Label className="text-[10px] font-bold">State</Label>
-                                <Input className="h-8 mt-0.5" value={c.state} onChange={(e) => updateChaturmasHistory(idx, "state", e.target.value)} />
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <Label className="text-[10px] font-bold">Linked Temple / Upashray</Label>
-                                <select className="w-full mt-0.5 h-8 rounded border bg-white px-2 text-xs focus:outline-none"
-                                  value={c.orgId} onChange={(e) => updateChaturmasHistory(idx, "orgId", e.target.value)}>
-                                  <option value="">Select Temple...</option>
-                                  {temples.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                                </select>
-                              </div>
-                              <div>
-                                <Label className="text-[10px] font-bold">Status</Label>
-                                <select className="w-full mt-0.5 h-8 rounded border bg-white px-2 text-xs focus:outline-none"
-                                  value={c.status} onChange={(e) => updateChaturmasHistory(idx, "status", e.target.value)}>
-                                  <option value="Completed">Completed</option>
-                                  <option value="Ongoing">Ongoing</option>
-                                  <option value="Upcoming">Upcoming</option>
-                                </select>
-                              </div>
-                            </div>
+                        {(!form.chaturmasHistory || form.chaturmasHistory.length === 0) ? (
+                          <div className="text-xs text-slate-400 italic p-3 border border-dashed rounded-lg bg-white text-center">
+                            No Chaturmas history entries found. These are auto-populated when temples list this monk profile in their Chaturmas schedule.
                           </div>
-                        ))}
+                        ) : (
+                          <div className="space-y-2">
+                            {form.chaturmasHistory.map((c, idx) => (
+                              <div key={idx} className="border p-3 rounded-lg bg-white space-y-1 text-xs relative shadow-sm">
+                                <div className="flex justify-between items-center font-bold text-purple-950">
+                                  <span>📅 Year: {c.year}</span>
+                                  <Badge className="bg-purple-100 text-purple-800 border-purple-200">{c.status || "Completed"}</Badge>
+                                </div>
+                                <div className="text-slate-600 mt-1 space-y-0.5">
+                                  <div>📍 Location: <strong>{c.city}, {c.state}</strong></div>
+                                  {c.orgId && (
+                                    <div>🛕 Temple: <strong>{temples.find(t => t.id === c.orgId)?.name || c.orgId}</strong></div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                     </div>
@@ -1445,7 +1424,7 @@ function RegisterMonkDialog({ onCreated }) {
                         <div>
                           <Label className="text-xs font-semibold block mb-1.5">Languages Spoken</Label>
                           <div className="grid grid-cols-3 gap-2 p-2 border rounded-lg bg-white">
-                            {["Hindi", "Gujarati", "Marwari", "Sanskrit", "Prakrit", "English"].map((lang) => {
+                            {["Hindi", "Gujarati", "Marwari", "Sanskrit", "Prakrit", "English", "Marathi", "Kannada", "Tamil", "Telugu", "Bengali", "Punjabi", "Odia", "Malayalam", "Urdu", "Kutchi"].map((lang) => {
                               const checked = (form.languagesSpoken || []).includes(lang);
                               return (
                                 <label key={lang} className="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer select-none">
